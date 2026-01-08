@@ -32,10 +32,50 @@
       max-width:calc(100% - 24px);
     }
     .right{text-align:right}
+    .overlay{
+      position:fixed; inset:0;
+      display:flex; align-items:center; justify-content:center;
+      background:rgba(17,24,39,.72);
+      z-index:9999;
+    }
+    .login-card{max-width:420px; width:calc(100% - 32px)}
+    .input{
+      width:100%; padding:12px 14px; border-radius:12px;
+      border:1px solid #d1d5db; font-size:16px; margin:10px 0;
+    }
+    .row{display:flex; gap:10px; align-items:center}
+    .error{
+      margin-top:10px; color:#b91c1c; background:#fee2e2;
+      border:1px solid #fecaca; padding:10px 12px; border-radius:12px;
+    }
   </style>
 </head>
 
 <body>
+
+<div id="loginOverlay" class="overlay">
+  <div class="card login-card">
+    <h2>Access</h2>
+    <p class="muted">Enter the access keyword to continue.</p>
+
+    <input
+      id="accessKeyInput"
+      class="input"
+      type="password"
+      placeholder="Access keyword"
+      autocomplete="off"
+    />
+
+    <div class="row">
+      <button id="loginBtn" class="btn">Enter</button>
+      <button id="clearBtn" class="btn ghost" type="button">Clear</button>
+    </div>
+
+    <div id="loginError" class="error" style="display:none;"></div>
+  </div>
+</div>
+
+
 <div class="app">
 
   <!-- HOME -->
@@ -180,6 +220,70 @@
 
   const $ = (id) => document.getElementById(id);
 
+    // ---------- LOGIN GATE (hash-based, no persistence) ----------
+  // Replace with your SHA-256 hash (hex) of the keyword
+  const ACCESS_HASH_HEX = "99a2ac41d64f86af9fe7d20e89f46308dd759347ef4f2da507eafaf6dadabe3f";
+
+  const loginOverlay = $("loginOverlay");
+  const accessKeyInput = $("accessKeyInput");
+  const loginBtn = $("loginBtn");
+  const clearBtn = $("clearBtn");
+  const loginError = $("loginError");
+
+  function toHex(buffer) {
+    return [...new Uint8Array(buffer)]
+      .map(b => b.toString(16).padStart(2, "0"))
+      .join("");
+  }
+
+  async function sha256Hex(text) {
+    const data = new TextEncoder().encode(text);
+    const digest = await crypto.subtle.digest("SHA-256", data);
+    return toHex(digest);
+  }
+
+  async function tryUnlock() {
+    const raw = (accessKeyInput.value || "").trim();
+
+    if (!raw) {
+      loginError.textContent = "Please enter the access keyword.";
+      loginError.style.display = "block";
+      return;
+    }
+
+    const hash = await sha256Hex(raw);
+
+    if (hash === ACCESS_HASH_HEX) {
+      loginOverlay.style.display = "none";
+      loginError.style.display = "none";
+      accessKeyInput.value = "";
+    } else {
+      loginError.textContent = "Incorrect keyword.";
+      loginError.style.display = "block";
+    }
+  }
+
+  function initLoginGate() {
+    // Always locked on load / refresh
+    loginOverlay.style.display = "flex";
+    setTimeout(() => accessKeyInput.focus(), 50);
+
+    loginBtn.addEventListener("click", tryUnlock);
+    accessKeyInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") tryUnlock();
+    });
+    clearBtn.addEventListener("click", () => {
+      accessKeyInput.value = "";
+      loginError.style.display = "none";
+      accessKeyInput.focus();
+    });
+  }
+
+  initLoginGate();
+  // ---------- END LOGIN GATE ----------
+
+
+
   const home = $("home");
   const report = $("report");
   const toast = $("toast");
@@ -239,7 +343,7 @@
   }
 
   function markDirty(){
-    if (statusPill.textContent !== "Draft*") statusPill.textContent = "Draft*";
+    if (statusPill.textContent !== "v1.00") statusPill.textContent = "v1.00";
   }
 
   [
@@ -392,7 +496,7 @@
     resetPersonnelToDefault();
     resetVehiclesToDefault();
 
-    statusPill.textContent = "Draft";
+    statusPill.textContent = "v1.00";
   }
 
   async function saveReport(){
@@ -610,5 +714,3 @@
 
 </body>
 </html>
-
-
