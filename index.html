@@ -56,6 +56,7 @@
       <button class="btn ghost" id="cancelBtn">Άκυρο</button>
       <button class="btn secondary" id="previewBtn">Προεπισκόπηση</button>
       <button class="btn" id="saveBtn">Αποθήκευση</button>
+      <button id="btnShare" class="btn secondary">Share</button>
     </div>
 
     <div class="split" style="margin-top:12px">
@@ -492,6 +493,84 @@
     w.document.close();
   }
 
+  function buildReportObject() {
+    return {
+      schemaVersion: 1,
+      date: new Date().toISOString().slice(0, 10),
+      site: "SITE_A",
+      personnel: [],
+      notes: ""
+    };
+  }
+
+  function makeReportFilename(report) {
+    // e.g. daily-report_2026-01-08_SITE_A.json
+    return `daily-report_${report.date}_${report.site}.json`;
+  }
+
+  function downloadFile(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  async function shareReportJson(reportObj) {
+    const jsonText = JSON.stringify(reportObj, null, 2);
+    const blob = new Blob([jsonText], { type: "application/json" });
+    const filename = makeReportFilename(reportObj);
+
+    // Web Share API expects File objects for file sharing
+    const file = new File([blob], filename, { type: "application/json" });
+
+    const shareData = {
+      title: "Daily Site Report",
+      text: `Daily report ${reportObj.date} (${reportObj.site})`,
+      files: [file]
+    };
+
+    // 1) Best case: share with files
+    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share(shareData);
+        return true;
+      } catch (err) {
+        // User cancelled share, or share failed
+        console.warn("Share failed/cancelled:", err);
+        return false;
+      }
+    }
+
+    // 2) If file sharing is not supported, try sharing without files (text only)
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: shareData.title,
+          text: shareData.text
+          // You can also include url: location.href if useful
+        });
+        // Still download the file so they can upload manually
+        downloadFile(blob, filename);
+        return true;
+      } catch (err) {
+        console.warn("Share (no files) failed/cancelled:", err);
+      }
+    }
+
+    // 3) Final fallback: download only
+    downloadFile(blob, filename);
+    return false;
+  }
+
+  document.getElementById("btnShare").addEventListener("click", async () => {
+    const report = buildReportObject();
+    await shareReportJson(report);
+  });
+
   // Wire UI
   $("newBtn").addEventListener("click", () => {
     resetForm();
@@ -527,6 +606,12 @@
   $("resetVehicleBtn").addEventListener("click", () => {
     resetVehiclesToDefault();
     markDirty();
+  });
+
+
+  document.getElementById("btnShare").addEventListener("click", async () => {
+    const report = buildReportObject();
+    await shareReportJson(report);        
   });
 
   // initial state
