@@ -609,9 +609,10 @@
   });
 
 
-  document.getElementById("btnShare").addEventListener("click", async () => {
+  document.getElementById("btnShare").addEventListener("click", (e) => {
+    e.preventDefault();
     const report = buildReportObject();
-    await shareReportJson(report);        
+    shareReportJson(report);        
   });
 
   // initial state
