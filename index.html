@@ -73,6 +73,7 @@
       <button class="btn ghost" id="cancelBtn">Άκυρο</button>
       <button class="btn secondary" id="previewBtn">Προεπισκόπηση</button>
       <button class="btn" id="saveBtn">Αποθήκευση</button>
+      <button class="btn secondary" id="pngBtn">Εξαγωγή PNG</button>
     </div>
 
     <div class="split" style="margin-top:12px">
@@ -151,6 +152,22 @@
 
   <div class="toast" id="toast"></div>
 </div>
+
+<div id="exportWrap" style="
+  position:fixed;
+  left:-10000px;
+  top:0;
+  width:900px; /* controls PNG width */
+  background:#fff;
+  padding:18px;
+  color:#111;
+  font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;
+">
+  <!-- Filled dynamically -->
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
 
 <script>
 (() => {
@@ -510,6 +527,140 @@
     w.document.close();
   }
 
+function buildExportHtml(d){
+  const machinesRows = Object.entries(d.machines || {}).map(([k,v]) =>
+    `<tr><td>${escapeHtml(k)}</td><td class="r">${escapeHtml(String(v ?? 0))}</td></tr>`
+  ).join("");
+
+  const personnelRows = (d.personnel || []).map(p =>
+    `<tr><td>${escapeHtml(p.name)}</td><td class="r">${escapeHtml(p.arrival)}</td><td class="r">${escapeHtml(p.departure)}</td></tr>`
+  ).join("");
+
+  const vehiclesUsed = (d.vehicles || []).filter(v => v.used).map(v =>
+    `<li>${escapeHtml(v.label)}</li>`
+  ).join("") || `<li>—</li>`;
+
+  return `
+    <div class="box">
+      <div class="hdr">
+        <div class="t1">Ημερήσια Αναφορά Υπογείων</div>
+        <div class="t2">Ημερομηνία: <b>${escapeHtml(d.date || "")}</b></div>
+      </div>
+
+      <div class="grid">
+        <div>
+          <div class="sec">Γενικά</div>
+          <table class="tbl">
+            <tr><td>Μήκος (m)</td><td class="r">${escapeHtml(String(d.length_m ?? ""))}</td></tr>
+            <tr><td>Βάθος (m)</td><td class="r">${escapeHtml(String(d.depth_m ?? ""))}</td></tr>
+            <tr><td>Εμπόδια</td><td>${escapeHtml(d.obstacles || "")}</td></tr>
+            <tr><td>Διάβαση</td><td>${escapeHtml(d.crossing || "")}</td></tr>
+            <tr><td>Ιδιομορφία εδάφους</td><td>${escapeHtml(d.soil_condition || "")}</td></tr>
+          </table>
+
+          <div class="sec">Φορτηγά με μπάζα</div>
+          <div class="pillx">${escapeHtml(String(d.debris_trucks_loaded ?? 0))} φορτώσεις</div>
+        </div>
+
+        <div>
+          <div class="sec">Μηχανήματα (ώρες)</div>
+          <table class="tbl">
+            <tr><th>Μηχάνημα</th><th class="r">Ώρες</th></tr>
+            ${machinesRows}
+          </table>
+        </div>
+      </div>
+
+      <div class="sec">Προσωπικό</div>
+      <table class="tbl">
+        <tr><th>Όνομα</th><th class="r">Άφιξη</th><th class="r">Αναχώρηση</th></tr>
+        ${personnelRows}
+      </table>
+
+      <div class="sec">Οχήματα (σε χρήση)</div>
+      <ul class="ul">${vehiclesUsed}</ul>
+
+      <div class="sec">Σημειώσεις</div>
+      <div class="notes">${escapeHtml(d.notes || "").replaceAll("\n","<br>")}</div>
+    </div>
+
+    <style>
+      .box{border:1px solid #e5e7eb;border-radius:14px;padding:16px}
+      .hdr{display:flex;justify-content:space-between;gap:12px;align-items:flex-end;margin-bottom:10px}
+      .t1{font-size:22px;font-weight:800}
+      .t2{font-size:13px;color:#374151}
+      .sec{margin:14px 0 8px;font-weight:800}
+      .grid{display:grid;grid-template-columns:1.2fr 1fr;gap:14px}
+      .tbl{width:100%;border-collapse:collapse;font-size:13px}
+      .tbl th,.tbl td{border:1px solid #e5e7eb;padding:7px;vertical-align:top}
+      .tbl th{background:#f3f4f6;text-align:left}
+      .r{text-align:right;white-space:nowrap}
+      .pillx{display:inline-block;background:#eef2ff;color:#3730a3;padding:6px 10px;border-radius:999px;font-size:13px}
+      .ul{margin:0;padding-left:18px}
+      .notes{border:1px solid #e5e7eb;border-radius:10px;padding:10px;min-height:40px;font-size:13px}
+      @media print { .box{border:none} }
+    </style>
+  `;
+}
+
+function makePngFilename(d){
+  const date = d.date || todayISO();
+  return `daily_report_${date}.png`;
+}
+
+async function exportAndSharePng(){
+  const d = collectData();
+  if (!d.date) { showToast("Συμπληρώστε ημερομηνία."); return; }
+
+  const wrap = document.getElementById("exportWrap");
+  wrap.innerHTML = buildExportHtml(d);
+
+  // Render to canvas
+  const canvas = await html2canvas(wrap, {
+    scale: 2,               // sharper PNG
+    backgroundColor: "#fff" // ensure white background
+  });
+
+  // Convert to Blob
+  const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png", 1.0));
+  if (!blob) { showToast("Αποτυχία δημιουργίας PNG."); return; }
+
+  const filename = makePngFilename(d);
+
+  // Share if possible (Android Quick Share typically appears here)
+  try {
+    if (navigator.canShare) {
+      const file = new File([blob], filename, { type: "image/png" });
+      if (navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          title: "Daily report (PNG)",
+          text: "PNG export",
+          files: [file]
+        });
+        showToast("PNG έτοιμο για Quick Share/Share.");
+        return;
+      }
+    }
+  } catch (e) {
+    // user cancelled or share failed -> fallback download below
+  }
+
+  // Fallback: download
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => {
+    URL.revokeObjectURL(a.href);
+    a.remove();
+  }, 500);
+
+  showToast("PNG αποθηκεύτηκε στα Downloads.");
+}
+
+
+
   function buildReportObject() {
     return {
       schemaVersion: 1,
@@ -619,6 +770,8 @@
     resetVehiclesToDefault();
     markDirty();
   });
+
+  $("pngBtn").addEventListener("click", exportAndSharePng);
 
   // initial state
   home.style.display = "block";
