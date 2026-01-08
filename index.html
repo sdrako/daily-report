@@ -437,6 +437,33 @@
     home.style.display = "block";
   }
 
+  async function shareFile(file) {
+    // file should be a real File object, e.g. new File([blob], "report.xlsx", { type: ... })
+
+    if (!navigator.share) {
+      alert("Sharing not supported on this browser.");
+      return;
+    }
+
+    // Some browsers support share, but not file sharing
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({
+        title: "Daily Report",
+        text: "Daily report file",
+        files: [file],
+      });
+    } else {
+      // Fallback: download
+      const url = URL.createObjectURL(file);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = file.name;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+  }
+
+
   function openPreview(){
     const d = collectData();
     const w = window.open("", "_blank");
@@ -504,7 +531,7 @@
     home.style.display = "block";
   });
 
-  $("saveBtn").addEventListener("click", saveReport);
+  $("saveBtn").addEventListener("click", shareFile); //$("saveBtn").addEventListener("click", saveReport);
   $("previewBtn").addEventListener("click", openPreview);
 
   $("addPersonBtn").addEventListener("click", () => {
