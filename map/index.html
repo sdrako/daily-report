@@ -11,9 +11,8 @@
 
   <style>
     html, body { height: 100%; margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
-    #app { height: 100%; display: grid; grid-template-columns: 340px 1fr; }
-    #sidebar { padding: 14px 14px; border-right: 1px solid #ddd; overflow: auto; }
-    #map { height: 100%; }
+    #app {height: 100%; width: 100%;}
+    #map { height: 100%; width: 100%;}
     .muted { color: #666; font-size: 12px; line-height: 1.4; }
     .kpi { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
     .card { border: 1px solid #e3e3e3; border-radius: 10px; padding: 10px; }
@@ -78,51 +77,6 @@
 
 <body>
   <div id="app">
-    <div id="sidebar">
-      <h2 style="margin:0 0 6px 0;">Underground MV Line</h2>
-      <div class="muted">
-        Test version: static UI (Leaflet) + OneDrive-compatible local paths.<br/>
-        Click points to see photos. No server required.
-      </div>
-
-      <div class="kpi">
-        <div class="card">
-          <h3>Points</h3>
-          <div id="kpiPoints" style="font-size:22px; font-weight:700;">–</div>
-          <div class="muted">Total loaded</div>
-        </div>
-        <div class="card">
-          <h3>Completed</h3>
-          <div id="kpiCompleted" style="font-size:22px; font-weight:700;">–</div>
-          <div class="muted">Completed points</div>
-        </div>
-      </div>
-
-      <div style="margin-top: 12px;" class="card">
-        <h3>Find by chainage / ID</h3>
-        <div class="row">
-          <input id="searchBox" type="text" placeholder="e.g., 100 or 512" />
-          <button id="btnFind">Find</button>
-        </div>
-        <div class="muted" style="margin-top:6px;">
-          Searches <span class="pill">id</span> and <span class="pill">chainage_m</span>.
-        </div>
-      </div>
-
-      <div style="margin-top: 12px;" class="card">
-        <h3>How to update</h3>
-        <ol class="small" style="margin: 6px 0 0 18px; padding: 0;">
-          <li>Drop new photos into <code>photos/</code> (keep names stable).</li>
-          <li>Update photo path fields in QGIS if needed (relative paths).</li>
-          <li>Export points to GeoJSON and wrap into <code>data/points.js</code>.</li>
-        </ol>
-      </div>
-
-      <div style="margin-top: 12px;" class="muted">
-        Basemap: OpenStreetMap contributors.
-      </div>
-    </div>
-
     <div id="map"></div>
   </div>
 
