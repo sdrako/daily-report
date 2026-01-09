@@ -218,7 +218,7 @@ const markingsLayer = L.geoJSON(MARKINGS_GEOJSON, {
     const id = feature?.properties?.marking_id ?? "";
 
     const icon = L.divIcon({
-      className: "marking-icon", // we style everything via CSS
+      className: "marking-icon",
       html: `<span class="marking-text">${String(id)}</span>`
     });
 
@@ -228,8 +228,8 @@ const markingsLayer = L.geoJSON(MARKINGS_GEOJSON, {
   onEachFeature: (feature, layer) => {
     // Optional: click popup for details
     layer.bindPopup(
-      `<b>Marking</b><br>` +
-      `id: ${feature?.properties?.id ?? ""}<br>` +
+      `<b>ΣΗΜΑΝΣΗ</b><br>` +
+      `id: ${feature?.properties?.fid ?? ""}<br>` +
       `marking_id: ${feature?.properties?.marking_id ?? ""}`
     );
   }
