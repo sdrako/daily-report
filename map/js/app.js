@@ -223,15 +223,6 @@ const markingsLayer = L.geoJSON(MARKINGS_GEOJSON, {
     });
 
     return L.marker(latlng, { icon });
-  },
-
-  onEachFeature: (feature, layer) => {
-    // Optional: click popup for details
-    layer.bindPopup(
-      `<b>ΣΗΜΑΝΣΗ</b><br>` +
-      `id: ${feature?.properties?.fid ?? ""}<br>` +
-      `marking_id: ${feature?.properties?.marking_id ?? ""}`
-    );
   }
 }).addTo(map);
 
