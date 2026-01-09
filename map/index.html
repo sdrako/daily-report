@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Underground MV Line - Test Map UI</title>
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+
+  <style>
+    html, body { height: 100%; margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+    #app { height: 100%; display: grid; grid-template-columns: 340px 1fr; }
+    #sidebar { padding: 14px 14px; border-right: 1px solid #ddd; overflow: auto; }
+    #map { height: 100%; }
+    .muted { color: #666; font-size: 12px; line-height: 1.4; }
+    .kpi { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+    .card { border: 1px solid #e3e3e3; border-radius: 10px; padding: 10px; }
+    .card h3 { margin: 0 0 8px 0; font-size: 14px; }
+    .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; border: 1px solid #ccc; }
+    .pill.ok { border-color: #2b7; }
+    .pill.no { border-color: #c44; }
+    input[type="text"] { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 8px; }
+    button { padding: 8px 10px; border: 1px solid #ccc; background: #f8f8f8; border-radius: 8px; cursor: pointer; }
+    button:hover { background: #f0f0f0; }
+    .row { display: flex; gap: 8px; align-items: center; }
+    .row > * { flex: 1; }
+    .small { font-size: 12px; }
+    .popup-title { font-weight: 700; margin-bottom: 6px; }
+    .photos { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 8px; }
+    .photos img { width: 100%; height: auto; border-radius: 8px; border: 1px solid #ddd; }
+    .photos a { font-size: 12px; }
+
+    /* Orange dot marker with centered text */
+    .marking-icon {
+      width: 16px;
+      height: 16px;
+
+      background: rgba(251, 146, 60, 0.9); /* orange fill */
+      border: 2px solid rgba(194, 65, 12, 0.95); /* darker orange stroke */
+      border-radius: 999px;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      box-shadow: none;
+    }
+
+    /* Discrete label inside the dot */
+    .marking-icon .marking-text {
+      font-size: 9px;
+      font-weight: 700;
+      line-height: 1;
+      color: rgba(17, 24, 39, 0.85); /* dark gray */
+      user-select: none;
+      pointer-events: none; /* clicks go to the marker */
+    }
+
+    .axis-label {
+      background: rgba(255, 255, 255, 0.55); /* almost transparent */
+      border: 1px solid rgba(0, 0, 0, 0.25);
+      border-radius: 6px;
+      padding: 1px 6px;
+
+      font-size: 11px;
+      font-weight: 700;
+      color: #111827;
+
+      box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+      pointer-events: none;      /* do not block map interaction */
+      white-space: nowrap;
+    }
+
+  </style>
+</head>
+
+<body>
+  <div id="app">
+    <div id="sidebar">
+      <h2 style="margin:0 0 6px 0;">Underground MV Line</h2>
+      <div class="muted">
+        Test version: static UI (Leaflet) + OneDrive-compatible local paths.<br/>
+        Click points to see photos. No server required.
+      </div>
+
+      <div class="kpi">
+        <div class="card">
+          <h3>Points</h3>
+          <div id="kpiPoints" style="font-size:22px; font-weight:700;">–</div>
+          <div class="muted">Total loaded</div>
+        </div>
+        <div class="card">
+          <h3>Completed</h3>
+          <div id="kpiCompleted" style="font-size:22px; font-weight:700;">–</div>
+          <div class="muted">Completed points</div>
+        </div>
+      </div>
+
+      <div style="margin-top: 12px;" class="card">
+        <h3>Find by chainage / ID</h3>
+        <div class="row">
+          <input id="searchBox" type="text" placeholder="e.g., 100 or 512" />
+          <button id="btnFind">Find</button>
+        </div>
+        <div class="muted" style="margin-top:6px;">
+          Searches <span class="pill">id</span> and <span class="pill">chainage_m</span>.
+        </div>
+      </div>
+
+      <div style="margin-top: 12px;" class="card">
+        <h3>How to update</h3>
+        <ol class="small" style="margin: 6px 0 0 18px; padding: 0;">
+          <li>Drop new photos into <code>photos/</code> (keep names stable).</li>
+          <li>Update photo path fields in QGIS if needed (relative paths).</li>
+          <li>Export points to GeoJSON and wrap into <code>data/points.js</code>.</li>
+        </ol>
+      </div>
+
+      <div style="margin-top: 12px;" class="muted">
+        Basemap: OpenStreetMap contributors.
+      </div>
+    </div>
+
+    <div id="map"></div>
+  </div>
+
+  <!-- Leaflet -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+  <script src="https://unpkg.com/leaflet-textpath@1.2.3/leaflet.textpath.js"></script>
+
+  <!-- Local data as JS variables (works on file:// and OneDrive) -->
+  <!--<script src="data/plans.js"></script> -->
+  <script src="data/points.js"></script>
+  <script src="data/crossings.js"></script>
+  <script src="data/markings.js"></script>
+  <script src="data/crossend.js"></script>
+  <script src="data/axis.js"></script>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
