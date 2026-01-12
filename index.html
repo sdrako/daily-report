@@ -48,6 +48,27 @@
       margin-top:10px; color:#b91c1c; background:#fee2e2;
       border:1px solid #fecaca; padding:10px 12px; border-radius:12px;
     }
+    .time-suggest{
+      margin-top:6px;
+      padding:6px 8px;
+      border-radius:10px;
+      background: rgba(17,24,39,0.06);
+      border: 1px solid rgba(17,24,39,0.10);
+      font-size: 12px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+    }
+    .time-suggest[hidden]{display:none}
+    .time-suggest button{
+      border:0;
+      border-radius:10px;
+      padding:6px 10px;
+      background:#111827;
+      color:#fff;
+      font-weight:700;
+    } 
   </style>
 </head>
 
@@ -282,34 +303,97 @@
   ].forEach(el => el.addEventListener("input", markDirty));
 
   function renderPersonnel(){
-    personnelTable.querySelectorAll("tr.data-row").forEach(r => r.remove());
+  personnelTable.querySelectorAll("tr.data-row").forEach(r => r.remove());
 
-    personnel.forEach((p, idx) => {
-      const tr = document.createElement("tr");
-      tr.className = "data-row";
-      tr.innerHTML =
-        "<td><input type='text' data-idx='" + idx + "' data-field='name' value='" + escapeHtml(p.name) + "'></td>" +
-        "<td><input type='text' inputmode='numeric' pattern='^([01]\\d|2[0-3]):([0-5]\\d)$' placeholder='HH:MM' data-idx='" + idx + "' data-field='arrival' value='" + escapeHtml(p.arrival) + "'></td>" +
-        "<td><input type='text' inputmode='numeric' pattern='^([01]\\d|2[0-3]):([0-5]\\d)$' placeholder='HH:MM' data-idx='" + idx + "' data-field='departure' value='" + escapeHtml(p.departure) + "'></td>";
+  personnel.forEach((p, idx) => {
+    const tr = document.createElement("tr");
+    tr.className = "data-row";
 
-        
-      personnelTable.appendChild(tr);
-    });
+    // Put suggestion containers under each time input (only used for idx > 0)
+    tr.innerHTML =
+      "<td><input type='text' data-idx='" + idx + "' data-field='name' value='" + escapeHtml(p.name) + "'></td>" +
 
-    personnelTable.querySelectorAll("input[data-field='arrival'], input[data-field='departure']")
+      "<td>" +
+        "<input type='text' inputmode='numeric' pattern='^([01]\\d|2[0-3]):([0-5]\\d)$' " +
+        "placeholder='00:00' data-idx='" + idx + "' data-field='arrival' value='" + escapeHtml(p.arrival) + "'>" +
+        "<div class='time-suggest' data-suggest='arrival' data-idx='" + idx + "' hidden></div>" +
+      "</td>" +
+
+      "<td>" +
+        "<input type='text' inputmode='numeric' pattern='^([01]\\d|2[0-3]):([0-5]\\d)$' " +
+        "placeholder='00:00' data-idx='" + idx + "' data-field='departure' value='" + escapeHtml(p.departure) + "'>" +
+        "<div class='time-suggest' data-suggest='departure' data-idx='" + idx + "' hidden></div>" +
+      "</td>";
+
+    personnelTable.appendChild(tr);
+  });
+
+  // Existing formatting + state sync (keep as-is)
+  personnelTable.querySelectorAll("input[data-field='arrival'], input[data-field='departure']")
     .forEach(inp => {
-        inp.addEventListener("input", (e) => {
-            const i = Number(e.target.dataset.idx);
-            const f = e.target.dataset.field;
+      inp.addEventListener("input", (e) => {
+        const i = Number(e.target.dataset.idx);
+        const f = e.target.dataset.field;
 
-            const formatted = formatTimeInput(e.target.value);
-            e.target.value = formatted;
+        const formatted = formatTimeInput(e.target.value);
+        e.target.value = formatted;
 
-            personnel[i][f] = formatted;
-            markDirty();
-        });
+        personnel[i][f] = formatted;
+        markDirty();
+      });
+
+      // NEW: show suggestion on focus/click
+      inp.addEventListener("focus", onTimeFocusOrClick);
+      inp.addEventListener("click", onTimeFocusOrClick);
+
+      // Optional: hide the suggestion when leaving the field (small delay for button click)
+      inp.addEventListener("blur", (e) => {
+        const i = Number(e.target.dataset.idx);
+        if (i === 0) return;
+        const f = e.target.dataset.field;
+        const box = personnelTable.querySelector(`div.time-suggest[data-suggest="${f}"][data-idx="${i}"]`);
+        if (!box) return;
+        setTimeout(() => { box.hidden = true; box.innerHTML = ""; }, 120);
+      });
     });
+
+  function getFirstRowTime(field){
+    const first = personnel[0]?.[field] || "";
+    return String(first).trim();
   }
+
+  function onTimeFocusOrClick(e){
+    const i = Number(e.target.dataset.idx);
+    const f = e.target.dataset.field;
+
+    // Only suggest for rows after the first row
+    if (i === 0) return;
+
+    const ref = getFirstRowTime(f);
+    if (!ref) return; // no reference to copy
+
+    const current = String(e.target.value || "").trim();
+    if (current === ref) return; // already same, no need to show
+
+    const box = personnelTable.querySelector(`div.time-suggest[data-suggest="${f}"][data-idx="${i}"]`);
+    if (!box) return;
+
+    box.hidden = false;
+    box.innerHTML =
+      "<span>Χρήση 1ης γραμμής: <b>" + escapeHtml(ref) + "</b></span>" +
+      "<button type='button'>Εφαρμογή</button>";
+
+    const btn = box.querySelector("button");
+    btn.addEventListener("click", () => {
+      // Set value + trigger your existing input formatting/state update
+      e.target.value = ref;
+      e.target.dispatchEvent(new Event("input", { bubbles: true }));
+      box.hidden = true;
+      box.innerHTML = "";
+    }, { once: true });
+  }
+}
+
 
   function renderVehicles(){
     vehiclesTable.querySelectorAll("tr.data-row").forEach(r => r.remove());
@@ -780,5 +864,6 @@ async function exportAndSharePng(){
 
 </body>
 </html>
+
 
 
