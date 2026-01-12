@@ -97,18 +97,134 @@
       ? '<span class="pill ok">Ολοκληρωμένο</span>'
       : '<span class="pill no">Σε εξέλιξη</span>';
 
+    // Build candidate URLs (A/B/C/X). We’ll verify which exist on popupopen.
+    const id = props.id ?? '';
+    const pp = buildPhotoPathsFromId(id);
+
+    const candidates = [
+      { key: 'A', label: 'A (ΠΡΙΝ)', url: pp.A },
+      { key: 'B', label: 'B (ΚΑΤΑ ΤΗ ΔΙΑΡΚΕΙΑ)', url: pp.B },
+      { key: 'C', label: 'C (ΑΠΟΚΑΤΑΣΤΑΣΗ)', url: pp.C },
+      { key: 'X', label: 'X (ΑΥΛΑΚΙ)', url: pp.X }
+    ];
+
+    // Store candidates in a data attribute so popupopen can initialize the viewer.
+    const data = encodeURIComponent(JSON.stringify(candidates));
+
     return `
       <div class="popup-title popup-title--point">
-        Σημείο ${escapeHtml(props.id ?? '')} m ${badge}
+        Σημείο ${escapeHtml(id)} m ${badge}
       </div>
-      <div class="photos">
-        ${photoBlock('A (ΠΡΙΝ)', props.photo_A)}
-        ${photoBlock('B (ΚΑΤΑ ΤΗ ΔΙΑΡΚΕΙΑ)', props.photo_B)}
-        ${photoBlock('C (ΑΠΟΚΑΤΑΣΤΑΣΗ)', props.photo_C)}
-        ${photoBlock('X (ΑΥΛΑΚΙ)', props.photo_X)}
+
+      <div class="photo-viewer" data-photos="${data}" hidden>
+        <div class="frame">
+          <button class="nav prev" type="button" aria-label="Previous photo">‹</button>
+          <button class="nav next" type="button" aria-label="Next photo">›</button>
+          <img class="viewer-img" alt="" decoding="async" loading="eager">
+        </div>
+        <div class="meta">
+          <div class="viewer-label"></div>
+          <a class="viewer-open" href="#" target="_blank" rel="noopener">Open full size</a>
+        </div>
       </div>
     `;
   }
+
+  function resolveUrl(u) {
+  const clean = (u || '').trim();
+  if (!clean) return '';
+  return new URL(clean, document.baseURI).toString();
+}
+
+function probeImage(url) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve(true);
+    img.onerror = () => resolve(false);
+    img.decoding = "async";
+    img.loading = "eager";
+    img.src = url;
+  });
+}
+
+function renderViewer(root, state) {
+  const viewer = root.querySelector('.photo-viewer');
+  if (!viewer) return;
+
+  const img = viewer.querySelector('.viewer-img');
+  const labelEl = viewer.querySelector('.viewer-label');
+  const openEl = viewer.querySelector('.viewer-open');
+  const prevBtn = viewer.querySelector('.prev');
+  const nextBtn = viewer.querySelector('.next');
+
+  const n = state.photos.length;
+  const i = state.index;
+
+  const cur = state.photos[i];
+  img.src = cur.url;
+  img.alt = cur.label;
+  labelEl.textContent = `${cur.label} (${i + 1}/${n})`;
+  openEl.href = cur.url;
+
+  const multi = n > 1;
+  prevBtn.disabled = !multi;
+  nextBtn.disabled = !multi;
+  prevBtn.style.display = multi ? '' : 'none';
+  nextBtn.style.display = multi ? '' : 'none';
+}
+
+map.on('popupopen', async (e) => {
+  const root = e.popup?.getElement?.();
+  if (!root) return;
+
+  const viewer = root.querySelector('.photo-viewer');
+  if (!viewer) return;
+
+  // Prevent re-init if Leaflet reuses DOM
+  if (viewer.__inited) return;
+  viewer.__inited = true;
+
+  let candidates = [];
+  try {
+    candidates = JSON.parse(decodeURIComponent(viewer.getAttribute('data-photos') || '[]'));
+  } catch { candidates = []; }
+
+  // Resolve + filter empty
+  candidates = candidates
+    .map(p => ({ ...p, url: resolveUrl(p.url) }))
+    .filter(p => p.url);
+
+  // Probe which exist
+  const ok = [];
+  for (const c of candidates) {
+    // eslint-disable-next-line no-await-in-loop
+    const exists = await probeImage(c.url);
+    if (exists) ok.push(c);
+  }
+
+  // If none exist, keep viewer hidden
+  if (ok.length === 0) return;
+
+  // Store state on the viewer
+  viewer.__state = { photos: ok, index: 0 };
+  viewer.hidden = false;
+
+  renderViewer(root, viewer.__state);
+
+  // Wire buttons (scoped to this popup DOM)
+  viewer.addEventListener('click', (ev) => {
+    const st = viewer.__state;
+    if (!st || st.photos.length <= 1) return;
+
+    if (ev.target.closest('.prev')) {
+      st.index = (st.index - 1 + st.photos.length) % st.photos.length;
+      renderViewer(root, st);
+    } else if (ev.target.closest('.next')) {
+      st.index = (st.index + 1) % st.photos.length;
+      renderViewer(root, st);
+    }
+  });
+});
 
 function midLatLngOfLine(layer) {
   const latlngs = layer.getLatLngs();
@@ -201,7 +317,8 @@ const axisLayer = L.geoJSON(AXIS_GEOJSON, {
       maxWidth: 360,
       autoPan: true,
       keepInView: true,
-      autoPanPadding: [20, 20]
+      autoPanPadding: [20, 20],
+      className: 'point-photo-popup'
     });
 
     layer.on('click', () => {
