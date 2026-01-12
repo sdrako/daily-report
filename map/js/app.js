@@ -336,7 +336,7 @@ const crossingsLayer = L.geoJSON(CROSSINGS_GEOJSON, {
       weight: 2,
       fillOpacity: 0.75,
       // no explicit colors (keeps it neutral); differentiate by radius/tooltip/popup
-    }).bindTooltip(done ? 'Crossing (completed)' : 'Crossing (pending)');
+    }).bindTooltip(done ? 'Διάβαση (ολοκληρωμένη)' : 'Διάβαση (εκκρεμής)');
   },
   onEachFeature: (feature, layer) => {
   const p = feature.properties || {};
@@ -346,23 +346,29 @@ const crossingsLayer = L.geoJSON(CROSSINGS_GEOJSON, {
   const crossingPhoto = buildCrossingPhotoPathFromV2(chV2);
 
   const html = `
-    <div class="popup-title">Crossing ${escapeHtml(p.fid ?? '')}
-      ${p.completion ? '<span class="pill ok">completed</span>' : '<span class="pill no">pending</span>'}
+    <div class="popup-title">Διάβαση ${escapeHtml(p.fid ?? '')}
+      ${p.completion ? '<span class="pill ok">ολοκληρωμένη</span>' : '<span class="pill no">εκκρεμής</span>'}
     </div>
 
     <div class="muted">
-      Length: <b>${escapeHtml(fmtNum(p.length, 1))} m</b><br/>
-      Depth: <b>${escapeHtml(fmtNum(p.depth, 1))} m</b><br/>
-      Pipes: <b>${escapeHtml(p.pipes ?? '')}</b><br/>
-      Chainage (v2): <b>${escapeHtml(fmtNum(chV2, 1))} m</b><br/>
+      Μήκος: <b>${escapeHtml(fmtNum(p.length, 1))} m</b><br/>
+      Βάθος: <b>${escapeHtml(fmtNum(p.depth, 1))} m</b><br/>
+      Σωλήνες: <b>${escapeHtml(p.pipes ?? '')}</b><br/>
+      Θέση: <b>${escapeHtml(fmtNum(chV2, 1))} m</b><br/>
     </div>
 
     <div class="photos">
-      ${photoBlock('Crossing photo', crossingPhoto)}
+      ${photoBlock('Φωτογραφία Διάβασης', crossingPhoto)}
     </div>
   `;
 
   layer.bindPopup(html, { maxWidth: 360 });
+  
+  layer.on('click', () => {
+      const ll = layer.getLatLng();
+      map.panTo(ll, { animate: true });
+    });  
+
   }
   }).addTo(map);
 
