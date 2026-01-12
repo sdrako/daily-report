@@ -17,6 +17,28 @@
       .replaceAll("'", '&#039;');
   }
 
+    window.__photoPopupTidy = function (imgEl, ok) {
+      const item = imgEl?.closest?.('.photo-item');
+      const src = imgEl?.currentSrc || imgEl?.src || "(no src)";
+      console.log(`[PHOTO] ${ok ? "OK" : "FAIL"}:`, src);
+  
+      if (!item) return;
+  
+      if (ok) {
+        item.classList.add('is-ok'); 
+      } else {
+        item.remove();           
+      }
+  
+      const photos = imgEl.closest('.photos');
+      if (!photos) return;
+  
+      // Only hide container if it truly has no remaining blocks
+      if (photos.querySelectorAll('.photo-item').length === 0) {
+        photos.style.display = 'none';
+      }
+    };
+  
   function fmtNum(x, decimals = 1) {
   const n = Number(x);
   if (!Number.isFinite(n)) return '';
@@ -37,45 +59,51 @@
 
   function buildPhotoPathsFromId(id) {
     const n = Number(id);
-    if (!Number.isFinite(n)) return { A: "", B: "", C: "" };
+    if (!Number.isFinite(n)) return { A: "", B: "", C: "" , X: ""};
     return {
       A: `photos/${n}/A${n}.jpg`,
       B: `photos/${n}/B${n}.jpg`,
-      C: `photos/${n}/C${n}.jpg`
+      C: `photos/${n}/C${n}.jpg`,
+      X: `photos/${n}/X${n}.jpg`
       };
   }
 
   function photoBlock(label, path) {
     const clean = (path || '').trim();
     if (!clean) return '';
+
     const safePath = escapeHtml(clean);
     const safeLabel = escapeHtml(label);
+
     return `
-      <div>
+      <div class="photo-item">
         <div class="muted">${safeLabel}</div>
         <a href="${safePath}" target="_blank" rel="noopener">Open full size</a>
-        <img src="${safePath}" alt="${safeLabel}" loading="lazy" />
+        <img 
+          src="${safePath}"
+          alt="${safeLabel}"
+          loading="eager"
+          decoding = "async" 
+          onload="window.__photoPopupTidy(this, true)"
+          onerror="window.__photoPopupTidy(this, false)"
+        />
       </div>
     `;
   }
-
+  
   function pointPopupHtml(props) {
     const completed = !!props.completed;
     const badge = completed
-      ? '<span class="pill ok">completed</span>'
-      : '<span class="pill no">not completed</span>';
+      ? '<span class="pill ok">Ολοκληρωμένο</span>'
+      : '<span class="pill no">Σε εξέλιξη</span>';
 
     return `
-      <div class="popup-title">Point ${escapeHtml(props.id ?? '')} ${badge}</div>
-      <div class="muted">
-        Chainage: <b>${escapeHtml(props.chainage_m ?? '')} m</b><br/>
-        Type: <b>${escapeHtml(props.type ?? '')}</b><br/>
-        Note: ${escapeHtml(props.note ?? '')}
-      </div>
+      <div class="popup-title">Σημείο ${escapeHtml(props.id ?? '')} m ${badge}</div>
       <div class="photos">
-        ${photoBlock('A (Before)', props.photo_A)}
-        ${photoBlock('B (Cables visible)', props.photo_B)}
-        ${photoBlock('C (Restored)', props.photo_C)}
+        ${photoBlock('A (ΠΡΙΝ)', props.photo_A)}
+        ${photoBlock('B (ΚΑΤΑ ΤΗ ΔΙΑΡΚΕΙΑ)', props.photo_B)}
+        ${photoBlock('C (ΑΠΟΚΑΤΑΣΤΑΣΗ)', props.photo_C)}
+        ${photoBlock('X (ΑΥΛΑΚΙ)', props.photo_X)}
       </div>
     `;
   }
@@ -147,8 +175,7 @@ const axisLayer = L.geoJSON(AXIS_GEOJSON, {
 
   const pointsIndex = new Map(); // key: id and chainage_m -> leaflet layer
 
-
-  const pointsLayer = L.geoJSON(POINTS_GEOJSON, {
+ const pointsLayer = L.geoJSON(POINTS_GEOJSON, {
     pointToLayer: (feature, latlng) => {
       const completed = !!feature.properties?.completed;
       return L.circleMarker(latlng, {
@@ -162,15 +189,23 @@ const axisLayer = L.geoJSON(AXIS_GEOJSON, {
     onEachFeature: (feature, layer) => {
     const props = feature.properties || {};
 
-    // 🔹 OPTION A: auto-generate photo paths from id
-    if (!props.photo_A && !props.photo_B && !props.photo_C) {
-      const pp = buildPhotoPathsFromId(props.id);
-      props.photo_A = pp.A;
-      props.photo_B = pp.B;
-      props.photo_C = pp.C;
-    }
+    const pp = buildPhotoPathsFromId(props.id);
+    if (!props.photo_A) props.photo_A = pp.A;
+    if (!props.photo_B) props.photo_B = pp.B;
+    if (!props.photo_C) props.photo_C = pp.C;
+    if (!props.photo_X) props.photo_X = pp.X;
 
-    layer.bindPopup(pointPopupHtml(props), { maxWidth: 360 });
+    layer.bindPopup(pointPopupHtml(props), {
+      maxWidth: 360,
+      autoPan: true,
+      keepInView: true,
+      autoPanPadding: [20, 20]
+    });
+
+    layer.on('click', () => {
+      const ll = layer.getLatLng();
+      map.panTo(ll, { animate: true });
+    });
     }
   }).addTo(map);
 
