@@ -26,13 +26,33 @@
     .row { display: flex; gap: 8px; align-items: center; }
     .row > * { flex: 1; }
     .small { font-size: 12px; }
-    .popup-title { font-weight: 700; margin-bottom: 6px; }
     .photos { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 8px; }
     .photos img { width: 100%; height: auto; border-radius: 8px; border: 1px solid #ddd; }
     .photos a { font-size: 12px; }
 
     .photo-item { display: none; }
     .photo-item.is-ok { display: block; }
+
+    .popup-title {
+      font-weight: 800;
+      line-height: 1.2;
+    }
+
+    .popup-title--point {
+      font-size: 16px;
+    }
+
+    /* Phones */
+    @media (max-width: 480px) {
+      .popup-title--point {
+        font-size: 14px;
+      }
+
+      .popup-title--point .pill {
+        font-size: 11px;
+        padding: 2px 6px;
+      }
+    }
 
     /* Orange dot marker with centered text */
     .marking-icon {
