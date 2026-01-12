@@ -98,7 +98,9 @@
       : '<span class="pill no">Σε εξέλιξη</span>';
 
     return `
-      <div class="popup-title">Σημείο ${escapeHtml(props.id ?? '')} m ${badge}</div>
+      <div class="popup-title popup-title--point">
+        Σημείο ${escapeHtml(props.id ?? '')} m ${badge}
+      </div>
       <div class="photos">
         ${photoBlock('A (ΠΡΙΝ)', props.photo_A)}
         ${photoBlock('B (ΚΑΤΑ ΤΗ ΔΙΑΡΚΕΙΑ)', props.photo_B)}
