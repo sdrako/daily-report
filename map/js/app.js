@@ -363,7 +363,7 @@ const crossingsLayer = L.geoJSON(CROSSINGS_GEOJSON, {
   `;
 
   layer.bindPopup(html, { maxWidth: 360 });
-  
+
   layer.on('click', () => {
       const ll = layer.getLatLng();
       map.panTo(ll, { animate: true });
@@ -383,7 +383,31 @@ const markingsLayer = L.geoJSON(MARKINGS_GEOJSON, {
     });
 
     return L.marker(latlng, { icon });
+  },
+
+  onEachFeature: (feature, layer) => {
+    const latlng = layer.getLatLng();
+
+    const id = feature?.properties?.marking_id ?? "";
+    const lat = latlng.lat.toFixed(6);
+    const lng = latlng.lng.toFixed(6);
+
+    const html = `
+      <div style="font-family:system-ui,Segoe UI,Roboto,Arial; font-size:13px;">
+        <div style="font-weight:800; margin-bottom:6px;">
+          ΣΗΜΑΝΣΗ ${escapeHtml(id)}
+        </div>
+        <div>Lat: <b>${lat}</b></div>
+        <div>Lon: <b>${lng}</b></div>
+      </div>
+    `;
+
+    layer.bindPopup(html, {
+      autoPan: true,
+      keepInView: true
+    });
   }
+
 }).addTo(map);
 
 
