@@ -233,6 +233,85 @@ function midLatLngOfLine(layer) {
   return pts[Math.floor(pts.length / 2)];
 }
 
+function axisLabelForZoom(p, z) {
+  const code = (p.code ?? "").toString().trim();
+  const len  = (p.length ?? "").toString().trim();
+
+  if (!code) return "";             // nothing to show
+  if (z < 18) return "";            // hide
+  if (z < 19) return code;          // code only
+  return `${code} | ${len} m`;      // full
+}
+
+function perpendicularOffsetPx(map, layer, px = 14, side = 1) {
+  if (!map) return [0, 0];
+
+  const latlngs = layer.getLatLngs();
+  const pts = Array.isArray(latlngs[0]) ? latlngs.flat() : latlngs;
+  if (!pts || pts.length < 2) return [0, 0];
+
+  // use direction near the middle
+  const i = Math.floor(pts.length / 2);
+  const p1 = pts[i - 1] || pts[i];
+  const p2 = pts[i + 1] || pts[i];
+
+  const a = map.latLngToLayerPoint(p1);
+  const b = map.latLngToLayerPoint(p2);
+
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const len = Math.hypot(dx, dy) || 1;
+
+  // perpendicular unit vector
+  const nx = -dy / len;
+  const ny = dx / len;
+
+  return [nx * px * side, ny * px * side];
+}
+
+function stableSideFromFeature(feature) {
+  const s = String(feature?.properties?.code ?? feature?.properties?.id ?? "");
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+  return h % 2 === 0 ? 1 : -1;   // +1 or -1
+}
+
+function updateAxisTooltip(layer, map) {
+  if (!map || !map._loaded) return; // <-- prevents "Set map center and zoom first."
+
+  const p = layer?.feature?.properties ?? {};
+  const z = map.getZoom();
+
+  const label = axisLabelForZoom(p, z);
+  const mid = layer.__axisMid ?? (layer.__axisMid = midLatLngOfLine(layer));
+  if (!mid) return;
+
+  if (!label) {
+    layer.closeTooltip();
+    return;
+  }
+
+  const side = layer.__labelSide ?? (layer.__labelSide = stableSideFromFeature(layer.feature));
+  const px = z >= 18 ? 18 : 14;
+  const offset = perpendicularOffsetPx(map, layer, px, side);
+
+  if (!layer.getTooltip()) {
+    layer.bindTooltip(label, {
+      permanent: true,
+      direction: "center",
+      offset,
+      className: "axis-label",
+      opacity: 1
+    });
+  } else {
+    layer.setTooltipContent(label);
+    layer.getTooltip().options.offset = offset;
+  }
+
+  layer.openTooltip(mid);
+}
+
+
 const axisLayer = L.geoJSON(AXIS_GEOJSON, {
   style: (f) => {
     const code = f?.properties?.code;
@@ -244,29 +323,23 @@ const axisLayer = L.geoJSON(AXIS_GEOJSON, {
   },
 
   onEachFeature: (feature, layer) => {
+
+    layer.__axisMid = midLatLngOfLine(layer);
+    layer.__labelSide = stableSideFromFeature(feature);
+
+    // Delay initial render so geometry is fully attached to map panes
+    setTimeout(() => updateAxisTooltip(layer, map), 0);
+
     const p = feature?.properties ?? {};
-    const label = `${p.code ?? ""} | ${p.length ?? ""} m`;
 
-    const mid = midLatLngOfLine(layer);
-    if (!mid) return;
+    // Initial tooltip render based on current zoom
+    updateAxisTooltip(layer, map);
 
-    layer.bindTooltip(label, {
-      permanent: true,
-      direction: "center",
-      offset: [0, -15],     // ⬅ vertical offset from axis
-      className: "axis-label",
-      opacity: 1
-    }).openTooltip(mid);
-
-    // --- click popup ---
+    // --- click popup (unchanged) ---
     const rows = [];
-
-    // always show these
     rows.push(["ΕΚΤΔ", p.code]);
     rows.push(["ΜΗΚΟΣ", (p.length ?? "") + " m"]);
     rows.push(["ΒΑΘΟΣ", (p.depth ?? "") + " m"]);
-
-    // show only when not null / not empty
     if (p["3x150 XLPE"] != null) rows.push(["3x150 XLPE", p["3x150 XLPE"]]);
     if (p["3x240 XLPE"] != null) rows.push(["3x240 XLPE", p["3x240 XLPE"]]);
     if (p["Φ160"] != null) rows.push(["Φ160", p["Φ160"]]);
@@ -275,36 +348,43 @@ const axisLayer = L.geoJSON(AXIS_GEOJSON, {
       `<div style="font-family:system-ui,Segoe UI,Roboto,Arial; font-size:13px;">` +
       `<div style="font-weight:800; margin-bottom:6px;">Πληροφορίες Τμήματος</div>` +
       `<table style="border-collapse:collapse;">` +
-      rows
-        .map(([k, v]) =>
-          `<tr>` +
+      rows.map(([k, v]) =>
+        `<tr>` +
           `<td style="padding:2px 10px 2px 0; color:#6b7280; white-space:nowrap;">${k}</td>` +
           `<td style="padding:2px 0; font-weight:700;">${v ?? ""}</td>` +
-          `</tr>`
-        )
-        .join("") +
+        `</tr>`
+      ).join("") +
       `</table>` +
       `</div>`;
 
     layer.bindPopup(html, { closeButton: true });
   }
-
 }).addTo(map);
+
+// Update labels whenever zoom changes
+map.on("zoomend", () => {
+  axisLayer.eachLayer((layer) => updateAxisTooltip(layer, map));
+});
 
   const pointsIndex = new Map(); // key: id and chainage_m -> leaflet layer
 
  const pointsLayer = L.geoJSON(POINTS_GEOJSON, {
-    pointToLayer: (feature, latlng) => {
-      const completed = !!feature.properties?.completed;
-      return L.circleMarker(latlng, {
-        radius: 7,
-        color: "#c00000",        // stroke (red)
-        fillColor: "#e00000",    // fill (red)
-        weight: 2,
-        fillOpacity: 0.7
-      }).bindTooltip(completed ? 'Completed' : 'In progress');
-    },
-    onEachFeature: (feature, layer) => {
+  pointToLayer: (feature, latlng) => {
+    const props = feature.properties || {};
+    const completed = !!props.completed;
+
+    const text = String(props.id ?? ""); // expected 100, 200, 300, ...
+
+    const icon = L.divIcon({
+      className: "",
+      html: `<div class="chainage-icon">${escapeHtml(text)}</div>`
+    });
+
+    return L.marker(latlng, { icon })
+      .bindTooltip(completed ? "Ολοκληρωμένο" : "Σε εξέλιξη");
+  },
+
+  onEachFeature: (feature, layer) => {
     const props = feature.properties || {};
 
     const pp = buildPhotoPathsFromId(props.id);
@@ -318,15 +398,15 @@ const axisLayer = L.geoJSON(AXIS_GEOJSON, {
       autoPan: true,
       keepInView: true,
       autoPanPadding: [20, 20],
-      className: 'point-photo-popup'
+      className: "point-photo-popup"
     });
 
-    layer.on('click', () => {
+    layer.on("click", () => {
       const ll = layer.getLatLng();
       map.panTo(ll, { animate: true });
     });
-    }
-  }).addTo(map);
+  }
+}).addTo(map);
 
 const crossingsLayer = L.geoJSON(CROSSINGS_GEOJSON, {
   pointToLayer: (feature, latlng) => {
