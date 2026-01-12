@@ -311,7 +311,7 @@
 
     // Put suggestion containers under each time input (only used for idx > 0)
     tr.innerHTML =
-      "<td><input type='text' data-idx='" + idx + "' data-field='name' value='" + escapeHtml(p.name) + "'></td>" +
+      "<td><input type='text' readonly data-idx='" + idx + "' data-field='name' value='" + escapeHtml(p.name) + "'></td>" +
 
       "<td>" +
         "<input type='text' inputmode='numeric' pattern='^([01]\\d|2[0-3]):([0-5]\\d)$' " +
@@ -402,7 +402,7 @@
       const tr = document.createElement("tr");
       tr.className = "data-row";
       tr.innerHTML =
-        "<td><input type='text' data-vidx='" + idx + "' data-vfield='label' value='" + escapeHtml(v.label) + "'></td>" +
+        "<td><input type='text' readonly data-vidx='" + idx + "' data-vfield='label' value='" + escapeHtml(v.label) + "'></td>" +
         "<td class='right'><input type='checkbox' data-vidx='" + idx + "' data-vfield='used' " + (v.used ? "checked" : "") + "></td>";
       vehiclesTable.appendChild(tr);
     });
@@ -864,6 +864,7 @@ async function exportAndSharePng(){
 
 </body>
 </html>
+
 
 
 
