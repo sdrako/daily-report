@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="el">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Επιμετρήσεις</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <!-- OFFLINE BANNER -->
+  <div id="offlineBanner" class="offline-banner" hidden>
+    Είστε εκτός σύνδεσης. Οι αλλαγές δεν μπορούν να αποθηκευτούν.
+  </div>
+
+  <header class="topbar">
+    <div class="topbar-left">
+      <div class="app-title">Εφαρμογή Επιμετρήσεων - Υπόγειο Έργο - Αργοστόλι</div>
+    </div>
+
+    <div class="topbar-right">
+      <button id="btnRefresh" class="btn ghost">Ανανέωση</button>
+      <button id="btnExportPdf" class="btn">Εξαγωγή PDF</button>
+    </div>
+  </header>
+
+  <main class="main">
+    <!-- BROWSE SCREEN -->
+    <section id="screenBrowse" class="screen">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="h2">Λίστα Τμημάτων</h2>
+          <div class="muted small">Κλικ στη σειρά για Λεπτομέρειες/Επεξεργασία</div>
+        </div>
+
+        <div class="table-wrap">
+          <table class="table" id="browseTable">
+            <thead>
+                <tr>
+                    <th>ΧΘ-1</th>
+                    <th>ΧΘ-2</th>
+                    <th>ΕΤΚΔ</th>
+                </tr>
+            </thead>
+            <tbody id="browseTbody">
+              <!-- rows injected -->
+            </tbody>
+          </table>
+        </div>
+
+        <div id="browseEmpty" class="empty" hidden>
+          Δεν υπάρχουν εγγραφές.
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW SCREEN -->
+    <section id="screenView" class="screen" hidden>
+      <div class="card">
+        <div class="card-header row-between">
+          <div>
+            <h2 class="h2" id="viewTitle">ΧΘ-1 → ΧΘ-2</h2>
+            <div class="muted small" id="viewSubtitle">Προβολή εγγραφής</div>
+          </div>
+          <div class="actions">
+            <button id="btnViewBack" class="btn ghost">Πίσω</button>
+            <button id="btnViewEdit" class="btn">Επεξεργασία</button>
+            <button id="btnViewDelete" class="btn danger">Διαγραφή</button>
+          </div>
+        </div>
+
+        <div id="viewGrid" class="kv-grid">
+          <!-- key-values injected -->
+        </div>
+      </div>
+    </section>
+
+    <!-- EDIT/CREATE SCREEN -->
+    <section id="screenEdit" class="screen" hidden>
+      <div class="card">
+        <div class="card-header row-between">
+          <div>
+            <h2 class="h2" id="editTitle">Επεξεργασία</h2>
+            <div class="muted small" id="editSubtitle">Τα ΧΘ-1/ΧΘ-2 κλειδώνουν μετά τη δημιουργία.</div>
+          </div>
+          <div class="actions">
+            <button id="btnEditBack" class="btn ghost">Πίσω</button>
+            <button id="btnEditSave" class="btn">Αποθήκευση</button>
+          </div>
+        </div>
+
+        <!-- The form is generated from a schema in app.js -->
+        <form id="editForm" class="form">
+          <!-- fields injected -->
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <!-- FLOATING ACTION BUTTON -->
+  <button id="fabNew" class="fab" title="Νέα εγγραφή">+</button>
+
+  <!-- SIMPLE MODAL -->
+  <div id="modalBackdrop" class="modal-backdrop" hidden></div>
+  <div id="modal" class="modal" hidden>
+    <div class="modal-title" id="modalTitle">Modal</div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-actions" id="modalActions"></div>
+  </div>
+
+  <!-- LOADING OVERLAY -->
+    <div id="loadingOverlay" class="loading-overlay" hidden>
+    <div class="loading-card">
+        <div class="spinner" aria-hidden="true"></div>
+        <div class="loading-text" id="loadingText">Φόρτωση…</div>
+    </div>
+    </div>
+
+  <script src="./app.js"></script>
+</body>
+</html>
