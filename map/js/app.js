@@ -226,6 +226,12 @@ map.on('popupopen', async (e) => {
   });
 });
 
+function googleMapsPinUrl(lat, lon) {
+  // "query" opens a red pin at the coordinates in Google Maps
+  const q = `${lat},${lon}`;
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
+}
+
 function midLatLngOfLine(layer) {
   const latlngs = layer.getLatLngs();
   const pts = Array.isArray(latlngs[0]) ? latlngs.flat() : latlngs;
@@ -472,6 +478,8 @@ const markingsLayer = L.geoJSON(MARKINGS_GEOJSON, {
     const lat = latlng.lat.toFixed(6);
     const lng = latlng.lng.toFixed(6);
 
+    const url = googleMapsPinUrl(lat, lng);
+
     const html = `
       <div style="font-family:system-ui,Segoe UI,Roboto,Arial; font-size:13px;">
         <div style="font-weight:800; margin-bottom:6px;">
@@ -479,6 +487,10 @@ const markingsLayer = L.geoJSON(MARKINGS_GEOJSON, {
         </div>
         <div>Lat: <b>${lat}</b></div>
         <div>Lon: <b>${lng}</b></div>
+        <a href="${url}" target="_blank" rel="noopener noreferrer"
+          style="display:inline-block; margin-top:10px;padding:8px 8px;border-radius:10px;background:#111827;color:#fff;text-decoration:none;font-weight:700">
+          Άνοιγμα στο Google Maps
+        </a>
       </div>
     `;
 
