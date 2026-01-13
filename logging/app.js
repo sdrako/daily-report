@@ -23,9 +23,9 @@
     { key: "ΒΑΘΟΣ", type: "number" },
     { key: "ΕΤΚΔ", type: "text" },
     { key: "ΠΛΕΓΜΑ ΣΗΜΑΝΣΗΣ", type: "number" },
-    { key: "ΒΑΘΟΣ ΤΟΠΟΘΕΤΗΣΗΣ 3A", type: "number" },
-    { key: "XLPE 3X150 (XT)", type: "number" },
-    { key: "XLPE 3X240 (MT)", type: "number" },
+    { key: "ΒΑΘΟΣ ΤΟΠΟΘΕΤΗΣΗΣ 3Α", type: "number" },
+    { key: "XLPE 3X150 (ΧΤ)", type: "number" },
+    { key: "XLPE 3X240 (ΜΤ)", type: "number" },
     { key: "ΣΩΛΗΝΕΣ Φ160", type: "number" },
     { key: "ΠΛΑΤΟΣ ΠΛΕΓΜΑΤΟΣ Τ-139", type: "number" },
     { key: "ΠΛΑΤΟΣ ΥΠΟΣΤΡΩΜΑΤΟΣ", type: "number" },
@@ -216,10 +216,10 @@ function computeLengthFromCH(ch1, ch2) {
             "ΕΤΚΔ": "ΕΤΚΔ",
 
             "ΠΛΕΓΜΑ ΣΗΜΑΝΣΗΣ": "ΠΛΕΓΜΑ<wbr>ΣΗΜ.",
-            "ΒΑΘΟΣ ΤΟΠΟΘΕΤΗΣΗΣ 3A": "ΒΑΘΟΣ<br>3A",
+            "ΒΑΘΟΣ ΤΟΠΟΘΕΤΗΣΗΣ 3Α": "ΒΑΘΟΣ<br>3A",
 
-            "XLPE 3X150 (XT)": "XLPE<wbr>3×150",
-            "XLPE 3X240 (MT)": "XLPE<wbr>3×240",
+            "XLPE 3X150 (ΧΤ)": "XLPE<wbr>3×150",
+            "XLPE 3X240 (ΜΤ)": "XLPE<wbr>3×240",
 
             "ΣΩΛΗΝΕΣ Φ160": "Φ160",
 
