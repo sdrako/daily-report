@@ -752,25 +752,38 @@ async function saveEdit() {
   const ch2 = norm(data["ΧΘ-2"]);
   if (!ch1 || !ch2) { toast("Τα πεδία ΧΘ-1 και ΧΘ-2 είναι υποχρεωτικά."); return; }
 
-const L = computeLengthFromCH(data["ΧΘ-1"], data["ΧΘ-2"]);
-if (L !== null && L >= 0) {
+  const L = computeLengthFromCH(data["ΧΘ-1"], data["ΧΘ-2"]);
+  if (L !== null && L >= 0) {
     if (!norm(data["ΜΗΚΟΣ"])) data["ΜΗΚΟΣ"] = String(L);
     if (!norm(data["ΠΛΕΓΜΑ ΣΗΜΑΝΣΗΣ"])) data["ΠΛΕΓΜΑ ΣΗΜΑΝΣΗΣ"] = String(L);
-}
+  }
 
   const patch = {};
   for (const f of FIELDS) patch[f.key] = data[f.key] ?? "";
+
+  const wasCreate = (state.editMode === "create");
 
   setLoading(true, "Αποθήκευση…");
   el.btnEditSave.disabled = true;
 
   try {
     const saved = await api.upsertByKey(ch1, ch2, patch);
+
     state.selectedKey = { ch1, ch2 };
     state.selectedRecord = saved;
 
-    await loadList();            // keep browse in sync (simple & safe)
-    await openView({ ch1, ch2 }); // show updated record
+    await loadList(); // refresh browse list from server
+
+    if (wasCreate) {
+      // HARD NAVIGATION TO BROWSE AFTER NEW ENTRY
+      state.editMode = "edit";      // reset mode so back button doesn't behave like create
+      setScreen("browse");
+      updateConnectivityUi();
+      return;                       // CRITICAL: prevents any later navigation to view/edit
+    }
+
+    // EDIT case: go to view
+    //await openView({ ch1, ch2 });
 
   } catch (e) {
     toast("Αποτυχία αποθήκευσης. Δοκιμάστε ξανά.");
@@ -780,6 +793,7 @@ if (L !== null && L >= 0) {
     setLoading(false);
   }
 }
+
 
   async function deleteFromView() {
     if (!state.selectedKey) return;
@@ -810,6 +824,8 @@ if (L !== null && L >= 0) {
             }
             state.selectedKey = null;
             state.selectedRecord = null;
+
+            await loadList();
             renderBrowse();
             setScreen("browse");
             updateConnectivityUi();
