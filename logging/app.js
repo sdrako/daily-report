@@ -422,7 +422,7 @@ function buildAndPrintTableReport(rows) {
     <div class="hdr">
         <div>
         <h1 class="h1">Πίνακας Επιμετρήσεων</h1>
-        <div class="muted">Εξαγωγή: ${escapeHtml(stamp)}</div>
+        <div class="muted">${escapeHtml(stamp)}</div>
         </div>
     </div>
 
@@ -1014,3 +1014,4 @@ async function saveEdit() {
   loadList();
 
 })();
+
