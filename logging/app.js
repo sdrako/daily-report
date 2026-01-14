@@ -48,6 +48,7 @@
     selectedRecord: null, // object of all fields
     editMode: "edit", // edit | create
     isListLoading: false,
+    printSelected: new Set(),
   };
   
 
@@ -84,6 +85,8 @@
     modalTitle: document.getElementById("modalTitle"),
     modalBody: document.getElementById("modalBody"),
     modalActions: document.getElementById("modalActions"),
+
+    chkPrintAll: document.getElementById("chkPrintAll"),
 
     loadingOverlay: document.getElementById("loadingOverlay"),
     loadingText: document.getElementById("loadingText")
@@ -215,26 +218,59 @@ function computeLengthFromCH(ch1, ch2) {
             "ΒΑΘΟΣ": "ΒΑΘΟΣ",
             "ΕΤΚΔ": "ΕΤΚΔ",
 
-            "ΠΛΕΓΜΑ ΣΗΜΑΝΣΗΣ": "ΠΛΕΓΜΑ<wbr>ΣΗΜ.",
+            "ΠΛΕΓΜΑ ΣΗΜΑΝΣΗΣ": "ΠΛΕΓΜΑ<br>ΣΗΜ.",
             "ΒΑΘΟΣ ΤΟΠΟΘΕΤΗΣΗΣ 3Α": "ΒΑΘΟΣ<br>3A",
 
-            "XLPE 3X150 (ΧΤ)": "XLPE<wbr>3×150",
-            "XLPE 3X240 (ΜΤ)": "XLPE<wbr>3×240",
+            "XLPE 3X150 (ΧΤ)": "XLPE<br>3×150",
+            "XLPE 3X240 (ΜΤ)": "XLPE<br>3×240",
 
             "ΣΩΛΗΝΕΣ Φ160": "Φ160",
 
-            "ΠΛΑΤΟΣ ΠΛΕΓΜΑΤΟΣ Τ-139": "ΠΛΑΤΟΣ<wbr>T-139",
-            "ΠΛΑΤΟΣ ΥΠΟΣΤΡΩΜΑΤΟΣ": "ΠΛΑΤΟΣ<wbr>ΥΠΟΣΤΡ.",
-            "ΒΑΘΟΣ ΥΠΟΣΤΡΩΜΑΤΟΣ": "ΒΑΘΟΣ<wbr>ΥΠΟΣΤΡ.",
+            "ΠΛΑΤΟΣ ΠΛΕΓΜΑΤΟΣ Τ-139": "ΠΛΑΤΟΣ<br>T-139",
+            "ΠΛΑΤΟΣ ΥΠΟΣΤΡΩΜΑΤΟΣ": "ΠΛΑΤΟΣ<br>ΥΠΟΣΤΡ.",
+            "ΒΑΘΟΣ ΥΠΟΣΤΡΩΜΑΤΟΣ": "ΒΑΘΟΣ<br>ΥΠΟΣΤΡ.",
 
-            "ΠΛΑΤΟΣ ΑΣΦΑΛΤΟΥ": "ΠΛΑΤΟΣ<wbr>ΑΣΦ.",
-            "ΒΑΘΟΣ ΑΣΦΑΛΤΟΥ": "ΒΑΘΟΣ<wbr>ΑΣΦ.",
+            "ΠΛΑΤΟΣ ΑΣΦΑΛΤΟΥ": "ΠΛΑΤΟΣ<br>ΑΣΦ.",
+            "ΒΑΘΟΣ ΑΣΦΑΛΤΟΥ": "ΒΑΘΟΣ<br>ΑΣΦ.",
 
             "ΠΑΡΑΤΗΡΗΣΕΙΣ": "ΠΑΡΑΤΗΡΗΣΕΙΣ"
         };
 
         return map[key] || escapeHtml(key);
     }
+
+function selIdFromKey(k) {
+  return `${norm(k.ch1)}||${norm(k.ch2)}`;
+}
+
+function isSelectedForPrint(rec) {
+  return state.printSelected.has(selIdFromKey(keyOf(rec)));
+}
+
+function setSelectedForPrint(rec, on) {
+  const id = selIdFromKey(keyOf(rec));
+  if (on) state.printSelected.add(id);
+  else state.printSelected.delete(id);
+}
+
+function clearSelectionForPrint() {
+  state.printSelected.clear();
+}
+
+function selectAllForPrint() {
+  state.printSelected.clear();
+  for (const r of state.records) state.printSelected.add(selIdFromKey(keyOf(r)));
+}
+
+function updateBrowseHeaderSelectionUi() {
+  if (!el.chkPrintAll) return;
+  const total = state.records.length;
+  const sel = state.printSelected.size;
+
+  el.chkPrintAll.indeterminate = sel > 0 && sel < total;
+  el.chkPrintAll.checked = total > 0 && sel === total;
+}
+
 
 function buildAndPrintTableReport(rows) {
     rows = [...rows].sort((a, b) => {
@@ -298,15 +334,15 @@ function buildAndPrintTableReport(rows) {
     .muted{color:var(--muted);font-size:12px}
 
     .wrap{
-    display:flex;
-    justify-content:center;
-    align-items:flex-start;
-    padding:0;
+      display:flex;
+      justify-content:center;
+      align-items:flex-start;
+      padding:0;
     }
 
     .print-scale{
-    transform-origin: top center; /* IMPORTANT */
-    display:inline-block;
+      transform-origin: top center; /* IMPORTANT */
+      display:inline-block;
     }
 
     table{
@@ -321,7 +357,8 @@ function buildAndPrintTableReport(rows) {
     font-weight: 900;
     text-align: left;
     vertical-align: top;           /* key: avoid mid-cell centering */
-    padding: 6px 6px;
+    padding: 3px 3px;
+    font-size: 8px;
 
     border-bottom: 1px solid var(--border);
     border-right: 1px solid var(--border);
@@ -536,9 +573,17 @@ function buildAndPrintTableReport(rows) {
     const res = await jsonpRequest({ action: "list", fields });
     if (!res.ok) throw new Error(res.error || "export_list_failed");
     const rows = res.data || [];
-    buildAndPrintTableReport(rows);
+
+    const filtered = rows.filter(r => state.printSelected.has(selIdFromKey(keyOf(r))));
+
+    if (!filtered.length) {
+      toast("Δεν έχετε επιλέξει γραμμές για εκτύπωση.");
+      return;
     }
-};
+
+    buildAndPrintTableReport(filtered);
+  }
+  }
 
 
   function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
@@ -553,6 +598,12 @@ function buildAndPrintTableReport(rows) {
         // 8 skeleton rows
         for (let i = 0; i < 8; i++) {
         const tr = document.createElement("tr");
+
+        const td0 = document.createElement("td");
+        td0.className = "col-check";
+        td0.innerHTML = `<span class="skeleton">&nbsp;</span>`;
+        tr.appendChild(td0);
+
         for (let c = 0; c < BROWSE_COLS.length; c++) {
             const td = document.createElement("td");
             td.innerHTML = `<span class="skeleton">&nbsp;</span>`;
@@ -573,16 +624,36 @@ function buildAndPrintTableReport(rows) {
     for (const rec of state.records) {
         const tr = document.createElement("tr");
 
+        const tdChk = document.createElement("td");
+        tdChk.className = "col-check";
+
+        const chk = document.createElement("input");
+        chk.type = "checkbox";
+        chk.checked = isSelectedForPrint(rec);
+
+        // Prevent opening View when clicking checkbox
+        chk.addEventListener("click", (e) => e.stopPropagation());
+
+        chk.addEventListener("change", () => {
+          setSelectedForPrint(rec, chk.checked);
+          updateBrowseHeaderSelectionUi();
+        });
+
+        tdChk.appendChild(chk);
+        tr.appendChild(tdChk);
+
         for (const k of BROWSE_COLS) {
-        const td = document.createElement("td");
-        td.textContent = norm(rec[k]) || "";
-        tr.appendChild(td);
+          const td = document.createElement("td");
+          td.textContent = norm(rec[k]) || "";
+          tr.appendChild(td);
         }
 
         tr.style.cursor = "pointer";
         tr.addEventListener("click", () => openView(rec));
         el.browseTbody.appendChild(tr);
     }
+
+    updateBrowseHeaderSelectionUi();
 }
 
   // =========================
@@ -895,32 +966,41 @@ async function saveEdit() {
     updateConnectivityUi();
   });
 
+  el.chkPrintAll?.addEventListener("click", (e) => e.stopPropagation());
+  el.chkPrintAll?.addEventListener("change", () => {
+    if (el.chkPrintAll.checked) selectAllForPrint();
+    else clearSelectionForPrint();
+    renderBrowse(); // refresh row checkboxes + indeterminate state
+  });
+
+
   // =========================
   // LOAD
   // =========================
   async function loadList() {
-  try {
-    state.isListLoading = true;
-    renderBrowse(); // render skeleton immediately
-    setLoading(true, "Φόρτωση λίστας…");
+    try {
+      state.isListLoading = true;
+      renderBrowse(); // render skeleton immediately
+      setLoading(true, "Φόρτωση λίστας…");
 
-    const rows = await api.list();
-    state.records = rows;
+      const rows = await api.list();
+      state.records = rows;
+      clearSelectionForPrint();
 
-  } catch (e) {
-    toast("Έκτος Σύνδεσης");
-    console.error(e);
-    state.records = [];
-  } finally {
-    state.isListLoading = false;
-    renderBrowse();
-    setScreen("browse");
-    updateConnectivityUi();
+    } catch (e) {
+      toast("Έκτος Σύνδεσης");
+      console.error(e);
+      state.records = [];
+    } finally {
+      state.isListLoading = false;
+      renderBrowse();
+      setScreen("browse");
+      updateConnectivityUi();
 
-    // Force-close any leftover overlay state
-    clearLoading();
-    }
-}
+      // Force-close any leftover overlay state
+      clearLoading();
+      }
+  }
 
   // boot
   updateConnectivityUi();
