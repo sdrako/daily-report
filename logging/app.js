@@ -321,7 +321,7 @@ function buildAndPrintTableReport(rows) {
     body{
         font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
         color:var(--text);
-        margin: 3mm;
+        margin: 5mm;
     }
     .hdr{
         display:flex;
@@ -353,7 +353,7 @@ function buildAndPrintTableReport(rows) {
     }
 
     thead th{
-    background: var(--head);
+    background: #f9fafbc7;
     font-weight: 900;
     text-align: left;
     vertical-align: top;           /* key: avoid mid-cell centering */
@@ -397,18 +397,25 @@ function buildAndPrintTableReport(rows) {
     /* Emphasize key columns */
     th:nth-child(1), th:nth-child(2),
     td:nth-child(1), td:nth-child(2){ font-weight:900; }
+    
+    @page { size: A4 landscape; margin: 5mm; }
 
     @media print {
-    .wrap { overflow: visible !important; }
+      .wrap { overflow: visible !important; }
+      * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+
+      tbody tr:nth-child(even) td {
+        background: #fcfcfd !important;
+      }
+
+      thead th {
+        background: #f9fafbc7 !important;
+      }
     }
 
-
-    @page { size: A4 landscape; margin: 3mm; }
-    @media print {
-        body{ margin:0; }
-        thead{ display: table-header-group; } /* repeat header on each page */
-        tr{ page-break-inside: avoid; }
-    }
     </style>
     </head>
     <body>
@@ -429,7 +436,7 @@ function buildAndPrintTableReport(rows) {
     </div>
 
    <script>
-    var PAGE_MARGIN_MM = 3;
+    var PAGE_MARGIN_MM = 5;
     var A4_LANDSCAPE_WIDTH_MM = 297;
 
     function mmToPx(mm) {
