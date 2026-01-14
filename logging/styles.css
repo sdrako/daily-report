@@ -93,6 +93,21 @@ body{
 }
 .table th{background:#f9fafb;font-size:13px}
 
+#browseTable th.col-check,
+#browseTable td.col-check {
+  width: 46px;
+  text-align: center;
+  padding-left: 6px;
+  padding-right: 6px;
+  position: relative;
+}
+
+#browseTable th.col-check input,
+#browseTable td.col-check input {
+  cursor: pointer;
+  transform: scale(1.35);
+}
+
 .empty{
   padding:14px;
   margin-top:10px;
