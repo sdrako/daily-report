@@ -247,3 +247,77 @@ body{
   0%{background-position:100% 0}
   100%{background-position:0 0}
 }
+
+.sheet-picker{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  min-width: 160px;
+}
+
+.sheet-select{
+  height: 38px;
+  padding: 6px 10px;
+}
+
+/* Mobile: let it wrap nicely */
+@media (max-width: 700px){
+  .topbar-right{
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .sheet-picker{
+    min-width: 140px;
+    flex: 1 1 140px;
+  }
+}
+
+topbar {
+  background: #fff;
+  padding: 12px 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+/* Row 1 */
+.topbar-title {
+  margin-bottom: 8px;
+}
+
+.app-title {
+  font-size: 18px;
+  font-weight: 800;
+}
+
+/* Row 2 */
+.topbar-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+/* Left side */
+.controls-left {
+  display: flex;
+  align-items: center;
+}
+
+.sheet-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.sheet-label .select {
+  min-width: 180px;
+}
+
+/* Right side */
+.controls-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
