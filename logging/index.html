@@ -13,13 +13,28 @@
   </div>
 
   <header class="topbar">
-    <div class="topbar-left">
-      <div class="app-title">Εφαρμογή Επιμετρήσεων - Υπόγειο Έργο - Αργοστόλι</div>
+    <!-- Row 1: Title -->
+    <div class="topbar-title">
+      <div class="app-title">
+        Εφαρμογή Επιμετρήσεων - Υπόγειο Έργο - Αργοστόλι
+      </div>
     </div>
 
-    <div class="topbar-right">
-      <button id="btnRefresh" class="btn ghost">Ανανέωση</button>
-      <button id="btnExportPdf" class="btn">Εξαγωγή PDF</button>
+    <!-- Row 2: Controls -->
+    <div class="topbar-controls">
+      <div class="controls-left">
+        <label class="sheet-label">
+          Μήνας Πιστοποίησης
+          <select id="sheetSelect" class="select">
+            <!-- options injected -->
+          </select>
+        </label>
+      </div>
+
+      <div class="controls-right">
+        <button id="btnRefresh" class="btn ghost">Ανανέωση</button>
+        <button id="btnExportPdf" class="btn">Εξαγωγή PDF</button>
+      </div>
     </div>
   </header>
 
