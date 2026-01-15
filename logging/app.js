@@ -10,8 +10,18 @@
   // CONFIG
   // =========================
   // Later: set APPS_SCRIPT_URL to your deployed web app URL.
-  const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyJqkdvF7v4Vw5kdxmvTHyo4GMgwOwfrWm1p2d-ZrugHw-KxqNiV4keCgT6ZEocJiW1/exec";
-  const API_KEY = "AXON-TECHNIC_MEASURE-LOGGER-APP-KEY";
+  const ENV = "PROD";
+
+  const CONFIGS = {
+    DEV: { APPS_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbz-PFxBl_YPIvcH-8R_04GwnaSO3VWyf7YWyF13cMKG7ditgjG2lKMy3ZDr9hD8lPiljA/exec", API_KEY: "AXON-TECHNIC_MEASURE-LOGGER-APP-DEV-KEY" },
+    PROD:{ APPS_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbzvgc2-J5rqDvl0Zb2rZ16O4eRpJ75mXDiAIlmaip2dY8ff4YHYNvANOa3-EgXeVYCM/exec", API_KEY: "AXON-TECHNIC_MEASURE-LOGGER-APP-KEY" }
+  };
+
+  const { APPS_SCRIPT_URL, API_KEY } = CONFIGS[ENV];
+
+
+  //const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyJqkdvF7v4Vw5kdxmvTHyo4GMgwOwfrWm1p2d-ZrugHw-KxqNiV4keCgT6ZEocJiW1/exec";
+  //const API_KEY = "AXON-TECHNIC_MEASURE-LOGGER-APP-KEY";
 
   // Column headers must match your Google Sheet headers EXACTLY.
   // You can reorder freely; browse uses only 3 fields + View button.
@@ -49,6 +59,9 @@
     editMode: "edit", // edit | create
     isListLoading: false,
     printSelected: new Set(),
+    parts: [],
+    activeSheet: localStorage.getItem("activeSheet") || "",
+    activeSheetLabel: localStorage.getItem("activeSheetLabel") || "",
   };
   
 
@@ -89,7 +102,9 @@
     chkPrintAll: document.getElementById("chkPrintAll"),
 
     loadingOverlay: document.getElementById("loadingOverlay"),
-    loadingText: document.getElementById("loadingText")
+    loadingText: document.getElementById("loadingText"),
+
+    sheetSelect: document.getElementById("sheetSelect"),
   };
 
   // =========================
@@ -281,6 +296,7 @@ function buildAndPrintTableReport(rows) {
     });
 
     const now = new Date();
+    const partLabel = norm(state.activeSheetLabel || state.activeSheet);
     const stamp = now.toLocaleString("el-GR");
     const cols = FIELDS.map(f => f.key);
 
@@ -422,6 +438,10 @@ function buildAndPrintTableReport(rows) {
     <div class="hdr">
         <div>
         <h1 class="h1">Πίνακας Επιμετρήσεων</h1>
+        ${partLabel
+        ? `<div class="muted"><b>Μήνας Πιστοποίησης:</b> ${escapeHtml(partLabel)}</div>`
+        : ``}
+
         <div class="muted">${escapeHtml(stamp)}</div>
         </div>
     </div>
@@ -502,94 +522,106 @@ function buildAndPrintTableReport(rows) {
   // =========================
   function jsonpRequest(params) {
     return new Promise((resolve, reject) => {
-        const cb = `__cb_${Date.now()}_${Math.random().toString(16).slice(2)}`;
-        const qs = new URLSearchParams({ ...params, key: API_KEY, callback: cb });
+      const cb = `__cb_${Date.now()}_${Math.random().toString(16).slice(2)}`;
 
-        const script = document.createElement("script");
-        script.src = `${APPS_SCRIPT_URL}?${qs.toString()}`;
-        script.async = true;
+      const merged = { ...params, key: API_KEY, callback: cb };
 
-        const timeout = setTimeout(() => {
+      // Only default to activeSheet if caller did NOT provide "sheet"
+      if (!("sheet" in params) && state.activeSheet) {
+        merged.sheet = state.activeSheet;
+      }
+
+      // If caller provides sheet:"" we intentionally send blank (server uses DEFAULT_SHEET)
+      const qs = new URLSearchParams(merged);
+
+      const script = document.createElement("script");
+      script.src = `${APPS_SCRIPT_URL}?${qs.toString()}`;
+      script.async = true;
+
+      // TEMP: uncomment for diagnosis
+      // console.log("JSONP URL:", script.src);
+
+      const timeout = setTimeout(() => {
         cleanup();
         reject(new Error("JSONP timeout"));
-        }, 15000);
+      }, 15000);
 
-        function cleanup() {
+      function cleanup() {
         clearTimeout(timeout);
         delete window[cb];
-        if (script.parentNode) script.parentNode.removeChild(script);
-        }
+        script.remove();
+      }
 
-        window[cb] = (data) => {
-        cleanup();
-        resolve(data);
-        };
+      window[cb] = (data) => { cleanup(); resolve(data); };
+      script.onerror = () => { cleanup(); reject(new Error("JSONP network error")); };
 
-        script.onerror = () => {
-        cleanup();
-        reject(new Error("JSONP network error"));
-        };
-
-        document.head.appendChild(script);
+      document.head.appendChild(script);
     });
-}
+  }
+
 
   const api = {
-  async list() {
-    const res = await jsonpRequest({
-      action: "list",
-      fields: "ΧΘ-1,ΧΘ-2,ΕΤΚΔ"
-    });
-    if (!res.ok) throw new Error(res.error || "list_failed");
-    return res.data || [];
-  },
+    async list() {
+      const res = await jsonpRequest({
+        action: "list",
+        fields: "ΧΘ-1,ΧΘ-2,ΕΤΚΔ"
+      });
+      if (!res.ok) throw new Error(res.message || res.error || "list_failed");
+      return res.data || [];
+    },
 
-  async getByKey(ch1, ch2) {
-    const res = await jsonpRequest({
-      action: "get",
-      ch1: String(ch1 || "").trim(),
-      ch2: String(ch2 || "").trim()
-    });
-    if (!res.ok) throw new Error(res.error || "get_failed");
-    return res.data || null;
-  },
+    async getByKey(ch1, ch2) {
+      const res = await jsonpRequest({
+        action: "get",
+        ch1: String(ch1 || "").trim(),
+        ch2: String(ch2 || "").trim()
+      });
+      if (!res.ok) throw new Error(res.message || res.error || "get_failed");
+      return res.data || null;
+    },
 
-  async upsertByKey(ch1, ch2, patch) {
-    const res = await jsonpRequest({
-      action: "upsert",
-      ch1: String(ch1 || "").trim(),
-      ch2: String(ch2 || "").trim(),
-      patch: JSON.stringify(patch || {})
-    });
-    if (!res.ok) throw new Error(res.error || "upsert_failed");
-    return res.data;
-  },
+    async upsertByKey(ch1, ch2, patch) {
+      const res = await jsonpRequest({
+        action: "upsert",
+        ch1: String(ch1 || "").trim(),
+        ch2: String(ch2 || "").trim(),
+        patch: JSON.stringify(patch || {})
+      });
+      if (!res.ok) throw new Error(res.message || res.error || "upsert_failed");
+      return res.data;
+    },
 
-  async deleteByKey(ch1, ch2) {
-    const res = await jsonpRequest({
-      action: "delete",
-      ch1: String(ch1 || "").trim(),
-      ch2: String(ch2 || "").trim()
-    });
-    if (!res.ok) return false;
-    return true;
-  },
+    async deleteByKey(ch1, ch2) {
+      const res = await jsonpRequest({
+        action: "delete",
+        ch1: String(ch1 || "").trim(),
+        ch2: String(ch2 || "").trim()
+      });
+      if (!res.ok) return false;
+      return true;
+    },
 
-  async exportPdfAll() {
-    const fields = FIELDS.map(f => f.key).join(",");
-    const res = await jsonpRequest({ action: "list", fields });
-    if (!res.ok) throw new Error(res.error || "export_list_failed");
-    const rows = res.data || [];
+    async parts() {
+      const res = await jsonpRequest({ action: "parts", sheet: "" }); // explicit “no sheet”
+      if (!res.ok) throw new Error(res.message || res.error || "parts_failed");
+      return res.data || [];
+    },
 
-    const filtered = rows.filter(r => state.printSelected.has(selIdFromKey(keyOf(r))));
+    async exportPdfAll() {
+      const fields = FIELDS.map(f => f.key).join(",");
+      const res = await jsonpRequest({ action: "list", fields });
+      if (!res.ok) throw new Error(res.message || res.error || "export_failed");
+      const rows = res.data || [];
 
-    if (!filtered.length) {
-      toast("Δεν έχετε επιλέξει γραμμές για εκτύπωση.");
-      return;
+      const filtered = rows.filter(r => state.printSelected.has(selIdFromKey(keyOf(r))));
+
+      if (!filtered.length) {
+        toast("Δεν έχετε επιλέξει γραμμές για εκτύπωση.");
+        return;
+      }
+
+      buildAndPrintTableReport(filtered);
     }
-
-    buildAndPrintTableReport(filtered);
-  }
   }
 
 
@@ -913,6 +945,65 @@ async function saveEdit() {
     });
   }
 
+  function renderSheetSelect_() {
+    if (!el.sheetSelect) return;
+
+    el.sheetSelect.innerHTML = "";
+
+    // If parts not loaded, keep a placeholder
+    if (!state.parts.length) {
+      const opt = document.createElement("option");
+      opt.value = "";
+      opt.textContent = "—";
+      el.sheetSelect.appendChild(opt);
+      el.sheetSelect.value = "";
+      return;
+    }
+
+    for (const p of state.parts) {
+      const opt = document.createElement("option");
+      opt.value = p.sheet;
+      opt.textContent = p.label || p.sheet;
+      el.sheetSelect.appendChild(opt);
+    }
+
+    el.sheetSelect.value = state.activeSheet || state.parts[0].sheet;
+  }
+
+  async function initSheets_() {
+    try {
+      const parts = await api.parts();
+      state.parts = parts;
+
+      // Validate / pick default
+      if (state.activeSheet && !parts.some(p => p.sheet === state.activeSheet)) {
+        state.activeSheet = "";
+        localStorage.removeItem("activeSheet");
+        localStorage.removeItem("activeSheetLabel");
+      }
+
+      if (!state.activeSheet) {
+        state.activeSheet = parts[0]?.sheet || "";
+        const found = parts.find(p => p.sheet === state.activeSheet);
+        state.activeSheetLabel = found?.label || state.activeSheet;
+        localStorage.setItem("activeSheet", state.activeSheet);
+        localStorage.setItem("activeSheetLabel", state.activeSheetLabel);
+      } else {
+        const found = parts.find(p => p.sheet === state.activeSheet);
+        state.activeSheetLabel = found?.label || state.activeSheet;
+        localStorage.setItem("activeSheetLabel", state.activeSheetLabel);
+      }
+
+      renderSheetSelect_();
+
+    } catch (e) {
+      console.error(e);
+      state.parts = [];
+      renderSheetSelect_();
+      // Fall back to server default sheet
+    }
+  }
+
   // =========================
   // EXPORT PDF
   // =========================
@@ -980,6 +1071,25 @@ async function saveEdit() {
     renderBrowse(); // refresh row checkboxes + indeterminate state
   });
 
+  el.sheetSelect?.addEventListener("change", async (ev) => {
+    const sheet = String(ev.target.value || "").trim();
+    if (!sheet) return;
+
+    const found = (state.parts || []).find(p => p.sheet === sheet);
+
+    state.activeSheet = sheet;
+    state.activeSheetLabel = found?.label || sheet;
+
+    localStorage.setItem("activeSheet", state.activeSheet);
+    localStorage.setItem("activeSheetLabel", state.activeSheetLabel);
+
+    // Clear selection because it's per-sheet
+    clearSelectionForPrint();
+
+    // Reload list for the newly selected sheet
+    await loadList();
+  });
+
 
   // =========================
   // LOAD
@@ -995,7 +1105,7 @@ async function saveEdit() {
       clearSelectionForPrint();
 
     } catch (e) {
-      toast("Έκτος Σύνδεσης");
+      toast(String(e?.message || e));
       console.error(e);
       state.records = [];
     } finally {
@@ -1011,7 +1121,9 @@ async function saveEdit() {
 
   // boot
   updateConnectivityUi();
-  loadList();
+  (async () => {
+    await initSheets_();
+    await loadList();
+  })();
 
 })();
-
