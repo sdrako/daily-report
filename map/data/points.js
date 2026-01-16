@@ -15,6 +15,18 @@ var POINTS_GEOJSON = {
 { "type": "Feature", "properties": { "fid": 15, "id": 1200, "src_x": null, "src_y": null }, "geometry": { "type": "Point", "coordinates": [ 20.473971996318191, 38.192650986080054 ] } },
 { "type": "Feature", "properties": { "fid": 16, "id": 0, "src_x": null, "src_y": null }, "geometry": { "type": "Point", "coordinates": [ 20.482043993933548, 38.186901986865152 ] } },
 { "type": "Feature", "properties": { "fid": 17, "id": 100, "src_x": null, "src_y": null }, "geometry": { "type": "Point", "coordinates": [ 20.481715993433141, 38.187751984903244 ] } },
-{ "type": "Feature", "properties": { "fid": 18, "id": 200, "src_x": null, "src_y": null }, "geometry": { "type": "Point", "coordinates": [ 20.481468988346332, 38.188606988269072 ] } }
+{ "type": "Feature", "properties": { "fid": 18, "id": 200, "src_x": null, "src_y": null }, "geometry": { "type": "Point", "coordinates": [ 20.481468988346332, 38.188606988269072 ] } },
+{ "type": "Feature", "properties": { "fid": 19, "id": 1300, "src_x": null, "src_y": null }, "geometry": { "type": "Point", "coordinates": [ 20.473139949259487, 38.192012955237431 ] } },
+{ "type": "Feature", "properties": { "fid": 20, "id": 1400, "src_x": null, "src_y": null }, "geometry": { "type": "Point", "coordinates": [ 20.472112015663882, 38.191609985636987 ] } },
+{ "type": "Feature", "properties": { "fid": 21, "id": 1500, "src_x": null, "src_y": null }, "geometry": { "type": "Point", "coordinates": [ 20.471015991692983, 38.191432963470675 ] } },
+{ "type": "Feature", "properties": { "fid": 22, "id": 1600, "src_x": null, "src_y": null }, "geometry": { "type": "Point", "coordinates": [ 20.469892023390027, 38.191591016950092 ] } },
+{ "type": "Feature", "properties": { "fid": 23, "id": 1700, "src_x": null, "src_y": null }, "geometry": { "type": "Point", "coordinates": [ 20.468899951171704, 38.191284949415568 ] } },
+{ "type": "Feature", "properties": { "fid": 25, "id": 1900, "src_x": null, "src_y": null }, "geometry": { "type": "Point", "coordinates": [ 20.47038330274647, 38.190268491971281 ] } },
+{ "type": "Feature", "properties": { "fid": 26, "id": 2000, "src_x": null, "src_y": null }, "geometry": { "type": "Point", "coordinates": [ 20.470498964126904, 38.189372023458532 ] } },
+{ "type": "Feature", "properties": { "fid": 27, "id": 2100, "src_x": null, "src_y": null }, "geometry": { "type": "Point", "coordinates": [ 20.470542008432098, 38.188503998215893 ] } },
+{ "type": "Feature", "properties": { "fid": 28, "id": 1800, "src_x": null, "src_y": null }, "geometry": { "type": "Point", "coordinates": [ 20.469576588107373, 38.190661172425727 ] } },
+{ "type": "Feature", "properties": { "fid": 29, "id": 2200, "src_x": null, "src_y": null }, "geometry": { "type": "Point", "coordinates": [ 20.470820003616044, 38.18762679791579 ] } },
+{ "type": "Feature", "properties": { "fid": 30, "id": 2250, "src_x": null, "src_y": null }, "geometry": { "type": "Point", "coordinates": [ 20.471276042264865, 38.187386960997642 ] } },
+{ "type": "Feature", "properties": { "fid": 31, "id": 2038, "src_x": null, "src_y": null }, "geometry": { "type": "Point", "coordinates": [ 20.47052539529891, 38.189022538314056 ] } }
 ]
 };
