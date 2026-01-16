@@ -51,10 +51,18 @@
     return Math.floor(n);
   }
 
-  function buildCrossingPhotoPathFromV2(v2) {
+  function buildCrossingPhotoPathsFromV2(v2) {
     const chInt = chainageIntFromV2(v2);
-    if (chInt == null) return "";
-    return `photos/crossings/${chInt}.jpg`;
+    if (chInt == null) return { X: "", B: "", C: "", D: "" };
+
+    // Folder-per-chainage convention:
+    // photos/crossings/644/X644.jpg, B644.jpg, C644.jpg, D644.jpg
+    return {
+      X: `photos/crossings/${chInt}/X${chInt}.jpg`,
+      B: `photos/crossings/${chInt}/B${chInt}.jpg`,
+      C: `photos/crossings/${chInt}/C${chInt}.jpg`,
+      D: `photos/crossings/${chInt}/D${chInt}.jpg`
+    };
   }
 
   function buildPhotoPathsFromId(id) {
@@ -115,6 +123,52 @@
     return `
       <div class="popup-title popup-title--point">
         Σημείο ${escapeHtml(id)} m ${badge}
+      </div>
+
+      <div class="photo-viewer" data-photos="${data}" hidden>
+        <div class="frame">
+          <button class="nav prev" type="button" aria-label="Previous photo">‹</button>
+          <button class="nav next" type="button" aria-label="Next photo">›</button>
+          <img class="viewer-img" alt="" decoding="async" loading="eager">
+        </div>
+        <div class="meta">
+          <div class="viewer-label"></div>
+          <a class="viewer-open" href="#" target="_blank" rel="noopener">Open full size</a>
+        </div>
+      </div>
+    `;
+  }
+
+  function crossingPopupHtml(props) {
+    const p = props || {};
+    const done = !!p.completion;
+
+    const badge = done
+      ? '<span class="pill ok">ολοκληρωμένη</span>'
+      : '<span class="pill no">εκκρεμής</span>';
+
+    // Use either explicit fields (photo_X...) if present, otherwise defaults we set in onEachFeature
+    const candidates = [
+      { key: 'X', label: 'X', url: p.photo_X || "" },
+      { key: 'B', label: 'B', url: p.photo_B || "" },
+      { key: 'C', label: 'C', url: p.photo_C || "" },
+      { key: 'D', label: 'D', url: p.photo_D || "" }
+    ];
+
+    const data = encodeURIComponent(JSON.stringify(candidates));
+
+    const chV2 = p.dist_from_start_v2;
+
+    return `
+      <div class="popup-title">
+        Διάβαση ${escapeHtml(p.fid ?? '')} ${badge}
+      </div>
+
+      <div class="muted">
+        Μήκος: <b>${escapeHtml(fmtNum(p.length, 1))} m</b><br/>
+        Βάθος: <b>${escapeHtml(fmtNum(p.depth, 1))} m</b><br/>
+        Σωλήνες: <b>${escapeHtml(p.pipes ?? '')}</b><br/>
+        Θέση: <b>${escapeHtml(fmtNum(chV2, 1))} m</b><br/>
       </div>
 
       <div class="photo-viewer" data-photos="${data}" hidden>
@@ -426,34 +480,62 @@ const crossingsLayer = L.geoJSON(CROSSINGS_GEOJSON, {
     }).bindTooltip(done ? 'Διάβαση (ολοκληρωμένη)' : 'Διάβαση (εκκρεμής)');
   },
   onEachFeature: (feature, layer) => {
-  const p = feature.properties || {};
+    const p = feature.properties || {};
 
-  const chV2 = p.dist_from_start_v2;
-  const chInt = chainageIntFromV2(chV2);
-  const crossingPhoto = buildCrossingPhotoPathFromV2(chV2);
+    const chV2 = p.dist_from_start_v2;
+    const chInt = chainageIntFromV2(chV2);
+    const cp = buildCrossingPhotoPathsFromV2(chV2);
 
-  const html = `
-    <div class="popup-title">Διάβαση ${escapeHtml(p.fid ?? '')}
-      ${p.completion ? '<span class="pill ok">ολοκληρωμένη</span>' : '<span class="pill no">εκκρεμής</span>'}
-    </div>
+    if (!p.photo_X) p.photo_X = cp.X;
+    if (!p.photo_B) p.photo_B = cp.B;
+    if (!p.photo_C) p.photo_C = cp.C;
+    if (!p.photo_D) p.photo_D = cp.D;
 
-    <div class="muted">
-      Μήκος: <b>${escapeHtml(fmtNum(p.length, 1))} m</b><br/>
-      Βάθος: <b>${escapeHtml(fmtNum(p.depth, 1))} m</b><br/>
-      Σωλήνες: <b>${escapeHtml(p.pipes ?? '')}</b><br/>
-      Θέση: <b>${escapeHtml(fmtNum(chV2, 1))} m</b><br/>
-    </div>
+    const candidates = [
+      { key: 'X', label: 'X', url: p.photo_X || "" },
+      { key: 'B', label: 'B', url: p.photo_B || "" },
+      { key: 'C', label: 'C', url: p.photo_C || "" },
+      { key: 'D', label: 'D', url: p.photo_D || "" }
+    ];
 
-    <div class="photos">
-      ${photoBlock('Φωτογραφία Διάβασης', crossingPhoto)}
-    </div>
-  `;
+    const data = encodeURIComponent(JSON.stringify(candidates));
 
-  layer.bindPopup(html, { maxWidth: 360 });
+    const html = `
+      <div class="popup-title  popup-title--point">Διάβαση ${escapeHtml(p.fid ?? '')}
+        ${p.completion ? '<span class="pill ok">ολοκληρωμένη</span>' : '<span class="pill no">εκκρεμής</span>'}
+      </div>
 
-  layer.on('click', () => {
-      const ll = layer.getLatLng();
-      map.panTo(ll, { animate: true });
+      <div class="muted">
+        Μήκος: <b>${escapeHtml(fmtNum(p.length, 1))} m</b><br/>
+        Βάθος: <b>${escapeHtml(fmtNum(p.depth, 1))} m</b><br/>
+        Σωλήνες: <b>${escapeHtml(p.pipes ?? '')}</b><br/>
+        Θέση: <b>${escapeHtml(fmtNum(chV2, 1))} m</b><br/>
+      </div>
+
+      <div class="photo-viewer" data-photos="${data}" hidden>
+        <div class="frame">
+          <button class="nav prev" type="button">‹</button>
+          <button class="nav next" type="button">›</button>
+          <img class="viewer-img" alt="" decoding="async" loading="eager">
+        </div>
+        <div class="meta">
+          <div class="viewer-label"></div>
+          <a class="viewer-open" href="#" target="_blank" rel="noopener">Open full size</a>
+        </div>
+      </div>
+    `;
+
+     layer.bindPopup(html, {
+      maxWidth: 360,
+      autoPan: true,
+      keepInView: true,
+      autoPanPadding: [20, 20],
+      className: "point-photo-popup" // IMPORTANT: reuse point sizing CSS
+    });
+
+    layer.on('click', () => {
+        const ll = layer.getLatLng();
+        map.panTo(ll, { animate: true });
     });  
 
   }
