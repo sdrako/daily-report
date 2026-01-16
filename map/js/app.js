@@ -40,31 +40,31 @@
     };
   
   function fmtNum(x, decimals = 1) {
-  const n = Number(x);
-  if (!Number.isFinite(n)) return '';
-  return n.toFixed(decimals);
+    const n = Number(x);
+    if (!Number.isFinite(n)) return '';
+    return n.toFixed(decimals);
   }
 
   function chainageIntFromV2(v2) {
-  const n = Number(v2);
-  if (!Number.isFinite(n)) return null;
-  return Math.floor(n);
+    const n = Number(v2);
+    if (!Number.isFinite(n)) return null;
+    return Math.floor(n);
   }
 
   function buildCrossingPhotoPathFromV2(v2) {
-  const chInt = chainageIntFromV2(v2);
-  if (chInt == null) return "";
-  return `photos/crossings/${chInt}.jpg`;
+    const chInt = chainageIntFromV2(v2);
+    if (chInt == null) return "";
+    return `photos/crossings/${chInt}.jpg`;
   }
 
   function buildPhotoPathsFromId(id) {
     const n = Number(id);
-    if (!Number.isFinite(n)) return { A: "", B: "", C: "" , X: ""};
+    if (!Number.isFinite(n)) return { A: "", X: "", B: "", C: ""};
     return {
       A: `photos/${n}/A${n}.jpg`,
+      X: `photos/${n}/X${n}.jpg`,
       B: `photos/${n}/B${n}.jpg`,
-      C: `photos/${n}/C${n}.jpg`,
-      X: `photos/${n}/X${n}.jpg`
+      C: `photos/${n}/C${n}.jpg`
       };
   }
 
@@ -103,9 +103,10 @@
 
     const candidates = [
       { key: 'A', label: 'A (ΠΡΙΝ)', url: pp.A },
+      { key: 'X', label: 'X (ΑΥΛΑΚΙ)', url: pp.X },
       { key: 'B', label: 'B (ΚΑΤΑ ΤΗ ΔΙΑΡΚΕΙΑ)', url: pp.B },
-      { key: 'C', label: 'C (ΑΠΟΚΑΤΑΣΤΑΣΗ)', url: pp.C },
-      { key: 'X', label: 'X (ΑΥΛΑΚΙ)', url: pp.X }
+      { key: 'C', label: 'C (ΑΠΟΚΑΤΑΣΤΑΣΗ)', url: pp.C }
+      
     ];
 
     // Store candidates in a data attribute so popupopen can initialize the viewer.
@@ -131,191 +132,191 @@
   }
 
   function resolveUrl(u) {
-  const clean = (u || '').trim();
-  if (!clean) return '';
-  return new URL(clean, document.baseURI).toString();
-}
-
-function probeImage(url) {
-  return new Promise((resolve) => {
-    const img = new Image();
-    img.onload = () => resolve(true);
-    img.onerror = () => resolve(false);
-    img.decoding = "async";
-    img.loading = "eager";
-    img.src = url;
-  });
-}
-
-function renderViewer(root, state) {
-  const viewer = root.querySelector('.photo-viewer');
-  if (!viewer) return;
-
-  const img = viewer.querySelector('.viewer-img');
-  const labelEl = viewer.querySelector('.viewer-label');
-  const openEl = viewer.querySelector('.viewer-open');
-  const prevBtn = viewer.querySelector('.prev');
-  const nextBtn = viewer.querySelector('.next');
-
-  const n = state.photos.length;
-  const i = state.index;
-
-  const cur = state.photos[i];
-  img.src = cur.url;
-  img.alt = cur.label;
-  labelEl.textContent = `${cur.label} (${i + 1}/${n})`;
-  openEl.href = cur.url;
-
-  const multi = n > 1;
-  prevBtn.disabled = !multi;
-  nextBtn.disabled = !multi;
-  prevBtn.style.display = multi ? '' : 'none';
-  nextBtn.style.display = multi ? '' : 'none';
-}
-
-map.on('popupopen', async (e) => {
-  const root = e.popup?.getElement?.();
-  if (!root) return;
-
-  const viewer = root.querySelector('.photo-viewer');
-  if (!viewer) return;
-
-  // Prevent re-init if Leaflet reuses DOM
-  if (viewer.__inited) return;
-  viewer.__inited = true;
-
-  let candidates = [];
-  try {
-    candidates = JSON.parse(decodeURIComponent(viewer.getAttribute('data-photos') || '[]'));
-  } catch { candidates = []; }
-
-  // Resolve + filter empty
-  candidates = candidates
-    .map(p => ({ ...p, url: resolveUrl(p.url) }))
-    .filter(p => p.url);
-
-  // Probe which exist
-  const ok = [];
-  for (const c of candidates) {
-    // eslint-disable-next-line no-await-in-loop
-    const exists = await probeImage(c.url);
-    if (exists) ok.push(c);
+    const clean = (u || '').trim();
+    if (!clean) return '';
+    return new URL(clean, document.baseURI).toString();
   }
 
-  // If none exist, keep viewer hidden
-  if (ok.length === 0) return;
-
-  // Store state on the viewer
-  viewer.__state = { photos: ok, index: 0 };
-  viewer.hidden = false;
-
-  renderViewer(root, viewer.__state);
-
-  // Wire buttons (scoped to this popup DOM)
-  viewer.addEventListener('click', (ev) => {
-    const st = viewer.__state;
-    if (!st || st.photos.length <= 1) return;
-
-    if (ev.target.closest('.prev')) {
-      st.index = (st.index - 1 + st.photos.length) % st.photos.length;
-      renderViewer(root, st);
-    } else if (ev.target.closest('.next')) {
-      st.index = (st.index + 1) % st.photos.length;
-      renderViewer(root, st);
-    }
-  });
-});
-
-function googleMapsPinUrl(lat, lon) {
-  // "query" opens a red pin at the coordinates in Google Maps
-  const q = `${lat},${lon}`;
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
-}
-
-function midLatLngOfLine(layer) {
-  const latlngs = layer.getLatLngs();
-  const pts = Array.isArray(latlngs[0]) ? latlngs.flat() : latlngs;
-  if (!pts || pts.length === 0) return null;
-  return pts[Math.floor(pts.length / 2)];
-}
-
-function axisLabelForZoom(p, z) {
-  const code = (p.code ?? "").toString().trim();
-  const len  = (p.length ?? "").toString().trim();
-
-  if (!code) return "";             // nothing to show
-  if (z < 18) return "";            // hide
-  if (z < 19) return code;          // code only
-  return `${code} | ${len} m`;      // full
-}
-
-function perpendicularOffsetPx(map, layer, px = 14, side = 1) {
-  if (!map) return [0, 0];
-
-  const latlngs = layer.getLatLngs();
-  const pts = Array.isArray(latlngs[0]) ? latlngs.flat() : latlngs;
-  if (!pts || pts.length < 2) return [0, 0];
-
-  // use direction near the middle
-  const i = Math.floor(pts.length / 2);
-  const p1 = pts[i - 1] || pts[i];
-  const p2 = pts[i + 1] || pts[i];
-
-  const a = map.latLngToLayerPoint(p1);
-  const b = map.latLngToLayerPoint(p2);
-
-  const dx = b.x - a.x;
-  const dy = b.y - a.y;
-  const len = Math.hypot(dx, dy) || 1;
-
-  // perpendicular unit vector
-  const nx = -dy / len;
-  const ny = dx / len;
-
-  return [nx * px * side, ny * px * side];
-}
-
-function stableSideFromFeature(feature) {
-  const s = String(feature?.properties?.code ?? feature?.properties?.id ?? "");
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
-  return h % 2 === 0 ? 1 : -1;   // +1 or -1
-}
-
-function updateAxisTooltip(layer, map) {
-  if (!map || !map._loaded) return; // <-- prevents "Set map center and zoom first."
-
-  const p = layer?.feature?.properties ?? {};
-  const z = map.getZoom();
-
-  const label = axisLabelForZoom(p, z);
-  const mid = layer.__axisMid ?? (layer.__axisMid = midLatLngOfLine(layer));
-  if (!mid) return;
-
-  if (!label) {
-    layer.closeTooltip();
-    return;
-  }
-
-  const side = layer.__labelSide ?? (layer.__labelSide = stableSideFromFeature(layer.feature));
-  const px = z >= 18 ? 18 : 14;
-  const offset = perpendicularOffsetPx(map, layer, px, side);
-
-  if (!layer.getTooltip()) {
-    layer.bindTooltip(label, {
-      permanent: true,
-      direction: "center",
-      offset,
-      className: "axis-label",
-      opacity: 1
+  function probeImage(url) {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve(true);
+      img.onerror = () => resolve(false);
+      img.decoding = "async";
+      img.loading = "eager";
+      img.src = url;
     });
-  } else {
-    layer.setTooltipContent(label);
-    layer.getTooltip().options.offset = offset;
   }
 
-  layer.openTooltip(mid);
-}
+  function renderViewer(root, state) {
+    const viewer = root.querySelector('.photo-viewer');
+    if (!viewer) return;
+
+    const img = viewer.querySelector('.viewer-img');
+    const labelEl = viewer.querySelector('.viewer-label');
+    const openEl = viewer.querySelector('.viewer-open');
+    const prevBtn = viewer.querySelector('.prev');
+    const nextBtn = viewer.querySelector('.next');
+
+    const n = state.photos.length;
+    const i = state.index;
+
+    const cur = state.photos[i];
+    img.src = cur.url;
+    img.alt = cur.label;
+    labelEl.textContent = `${cur.label} (${i + 1}/${n})`;
+    openEl.href = cur.url;
+
+    const multi = n > 1;
+    prevBtn.disabled = !multi;
+    nextBtn.disabled = !multi;
+    prevBtn.style.display = multi ? '' : 'none';
+    nextBtn.style.display = multi ? '' : 'none';
+  }
+
+  map.on('popupopen', async (e) => {
+    const root = e.popup?.getElement?.();
+    if (!root) return;
+
+    const viewer = root.querySelector('.photo-viewer');
+    if (!viewer) return;
+
+    // Prevent re-init if Leaflet reuses DOM
+    if (viewer.__inited) return;
+    viewer.__inited = true;
+
+    let candidates = [];
+    try {
+      candidates = JSON.parse(decodeURIComponent(viewer.getAttribute('data-photos') || '[]'));
+    } catch { candidates = []; }
+
+    // Resolve + filter empty
+    candidates = candidates
+      .map(p => ({ ...p, url: resolveUrl(p.url) }))
+      .filter(p => p.url);
+
+    // Probe which exist
+    const ok = [];
+    for (const c of candidates) {
+      // eslint-disable-next-line no-await-in-loop
+      const exists = await probeImage(c.url);
+      if (exists) ok.push(c);
+    }
+
+    // If none exist, keep viewer hidden
+    if (ok.length === 0) return;
+
+    // Store state on the viewer
+    viewer.__state = { photos: ok, index: 0 };
+    viewer.hidden = false;
+
+    renderViewer(root, viewer.__state);
+
+    // Wire buttons (scoped to this popup DOM)
+    viewer.addEventListener('click', (ev) => {
+      const st = viewer.__state;
+      if (!st || st.photos.length <= 1) return;
+
+      if (ev.target.closest('.prev')) {
+        st.index = (st.index - 1 + st.photos.length) % st.photos.length;
+        renderViewer(root, st);
+      } else if (ev.target.closest('.next')) {
+        st.index = (st.index + 1) % st.photos.length;
+        renderViewer(root, st);
+      }
+    });
+  });
+
+  function googleMapsPinUrl(lat, lon) {
+    // "query" opens a red pin at the coordinates in Google Maps
+    const q = `${lat},${lon}`;
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
+  }
+
+  function midLatLngOfLine(layer) {
+    const latlngs = layer.getLatLngs();
+    const pts = Array.isArray(latlngs[0]) ? latlngs.flat() : latlngs;
+    if (!pts || pts.length === 0) return null;
+    return pts[Math.floor(pts.length / 2)];
+  }
+
+  function axisLabelForZoom(p, z) {
+    const code = (p.code ?? "").toString().trim();
+    const len  = (p.length ?? "").toString().trim();
+
+    if (!code) return "";             // nothing to show
+    if (z < 18) return "";            // hide
+    if (z < 19) return code;          // code only
+    return `${code} | ${len} m`;      // full
+  }
+
+  function perpendicularOffsetPx(map, layer, px = 14, side = 1) {
+    if (!map) return [0, 0];
+
+    const latlngs = layer.getLatLngs();
+    const pts = Array.isArray(latlngs[0]) ? latlngs.flat() : latlngs;
+    if (!pts || pts.length < 2) return [0, 0];
+
+    // use direction near the middle
+    const i = Math.floor(pts.length / 2);
+    const p1 = pts[i - 1] || pts[i];
+    const p2 = pts[i + 1] || pts[i];
+
+    const a = map.latLngToLayerPoint(p1);
+    const b = map.latLngToLayerPoint(p2);
+
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const len = Math.hypot(dx, dy) || 1;
+
+    // perpendicular unit vector
+    const nx = -dy / len;
+    const ny = dx / len;
+
+    return [nx * px * side, ny * px * side];
+  }
+
+  function stableSideFromFeature(feature) {
+    const s = String(feature?.properties?.code ?? feature?.properties?.id ?? "");
+    let h = 0;
+    for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+    return h % 2 === 0 ? 1 : -1;   // +1 or -1
+  }
+
+  function updateAxisTooltip(layer, map) {
+    if (!map || !map._loaded) return; // <-- prevents "Set map center and zoom first."
+
+    const p = layer?.feature?.properties ?? {};
+    const z = map.getZoom();
+
+    const label = axisLabelForZoom(p, z);
+    const mid = layer.__axisMid ?? (layer.__axisMid = midLatLngOfLine(layer));
+    if (!mid) return;
+
+    if (!label) {
+      layer.closeTooltip();
+      return;
+    }
+
+    const side = layer.__labelSide ?? (layer.__labelSide = stableSideFromFeature(layer.feature));
+    const px = z >= 18 ? 18 : 14;
+    const offset = perpendicularOffsetPx(map, layer, px, side);
+
+    if (!layer.getTooltip()) {
+      layer.bindTooltip(label, {
+        permanent: true,
+        direction: "center",
+        offset,
+        className: "axis-label",
+        opacity: 1
+      });
+    } else {
+      layer.setTooltipContent(label);
+      layer.getTooltip().options.offset = offset;
+    }
+
+    layer.openTooltip(mid);
+  }
 
 
 const axisLayer = L.geoJSON(AXIS_GEOJSON, {
