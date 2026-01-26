@@ -28,6 +28,3 @@ var CROSSINGS_GEOJSON = {
 { "type": "Feature", "properties": { "fid": 24, "length": 1, "depth": 1.2, "pipes": 3, "completion": false, "dist_from_start": 0, "dist_from_start_v2": 1241 }, "geometry": { "type": "Point", "coordinates": [ 20.473675, 38.192359 ] } }
 ]
 };
-
-
-
