@@ -25,6 +25,8 @@ var CROSSINGS_GEOJSON = {
 { "type": "Feature", "properties": { "fid": 21, "length": 7.5, "depth": 1.2, "pipes": 3, "completion": false, "dist_from_start": 1943.1833761353028, "dist_from_start_v2": 1943.1790986549734 }, "geometry": { "type": "Point", "coordinates": [ 20.470440091181423, 38.18988234933007 ] } },
 { "type": "Feature", "properties": { "fid": 22, "length": 5.5, "depth": 1.2, "pipes": 3, "completion": false, "dist_from_start": 2053.8258688377541, "dist_from_start_v2": 2023.0809873549435 }, "geometry": { "type": "Point", "coordinates": [ 20.470522371235287, 38.189164982191208 ] } },
 { "type": "Feature", "properties": { "fid": 23, "length": 6.5, "depth": 1.2, "pipes": 3, "completion": false, "dist_from_start": 2232.1557433003813, "dist_from_start_v2": 2171.7250115659199 }, "geometry": { "type": "Point", "coordinates": [ 20.470580546668707, 38.187846049151261 ] } }
+{ "type": "Feature", "properties": { "fid": 24, "length": 1, "depth": 1.2, "pipes": 3, "completion": false, "dist_from_start": 0, "dist_from_start_v2": 1241 }, "geometry": { "type": "Point", "coordinates": [ 20.473675, 38.192359 ] } }
 ]
 };
+
 
